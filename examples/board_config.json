@@ -1,0 +1,61 @@
+{
+  "columns": 3,
+  "gap": 12,
+  "selectable": true,
+  "show_checkboxes": true,
+  "image_click": "open",
+  "open_in_new_tab": true,
+  "show_hover_text": true,
+  "show_select_all": true,
+  "multi_select": true,
+  "selection_color": "#0f766e",
+  "thumbnail_fit": "cover",
+  "max_height": 480,
+  "empty_message": "No images",
+  "card_style": {
+    "background": "#ffffff",
+    "color": "#0f172a",
+    "fontFamily": "Segoe UI, system-ui, sans-serif"
+  },
+  "buttons": [
+    {"id": "approve", "label": "Approve selected", "variant": "primary"}
+  ],
+  "card_texts": [
+    {"id": "hint", "text": "click to open", "variant": "muted"}
+  ],
+  "items": [
+    {
+      "id": "docs",
+      "src": "https://picsum.photos/seed/sib-docs/320/320",
+      "label": "Docs",
+      "hover_text": "Opens the project README",
+      "caption": "GitHub",
+      "open_url": "https://github.com/gsiogkas/streamlit-image-board#readme",
+      "card_style": {
+        "background": "#ecfdf5",
+        "color": "#065f46"
+      }
+    },
+    {
+      "id": "pypi",
+      "src": "https://picsum.photos/seed/sib-pypi/320/320",
+      "label": "PyPI",
+      "hover_text": "Package page",
+      "caption": "Install",
+      "open_url": "https://pypi.org/project/streamlit-image-board/",
+      "image_click": "open"
+    },
+    {
+      "id": "select-me",
+      "src": "https://picsum.photos/seed/sib-select/320/320",
+      "label": "Select me",
+      "hover_text": "This card overrides board click → select",
+      "caption": "override",
+      "image_click": "select",
+      "card_style": {
+        "background": "#fff7ed",
+        "color": "#9a3412"
+      }
+    }
+  ]
+}

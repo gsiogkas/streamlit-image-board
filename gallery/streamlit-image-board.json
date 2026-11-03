@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "title": "Image Board",
+  "author": {
+    "github": "gsiogkas",
+    "displayName": "George Siogkas"
+  },
+  "links": {
+    "github": "https://github.com/gsiogkas/streamlit-image-board",
+    "pypi": "streamlit-image-board",
+    "demo": "https://image-board-demo.streamlit.app",
+    "docs": "https://github.com/gsiogkas/streamlit-image-board#readme"
+  },
+  "media": {
+    "image": "https://raw.githubusercontent.com/gsiogkas/streamlit-image-board/main/docs/assets/usage.gif"
+  },
+  "install": {
+    "pip": "pip install streamlit-image-board"
+  },
+  "governance": {
+    "enabled": true,
+    "notes": null
+  },
+  "categories": ["Images & video", "Widgets"]
+}

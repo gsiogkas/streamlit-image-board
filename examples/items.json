@@ -1,0 +1,18 @@
+[
+  {
+    "id": "a",
+    "src": "https://picsum.photos/seed/sib-a/320/320",
+    "label": "Alpha",
+    "hover_text": "Alpha — select mode",
+    "caption": "from JSON array",
+    "open_url": "https://github.com/gsiogkas/streamlit-image-board"
+  },
+  {
+    "id": "b",
+    "src": "https://picsum.photos/seed/sib-b/320/320",
+    "label": "Beta",
+    "caption": "also JSON",
+    "background": "#f0f9ff",
+    "color": "#075985"
+  }
+]

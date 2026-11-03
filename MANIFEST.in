@@ -1,0 +1,2 @@
+recursive-include streamlit_image_board/frontend/build *
+include streamlit_image_board/pyproject.toml

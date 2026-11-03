@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+/dist/
+/build/
+.venv/
+venv/
+uv.lock
+
+# Node / frontend
+node_modules/
+streamlit_image_board/frontend/node_modules/
+*.log
+.npm/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Misc
+tmp/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
