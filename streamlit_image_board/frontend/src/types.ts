@@ -1,5 +1,9 @@
 import type { CSSProperties } from "react";
 
+import type { BoardTheme } from "./theme";
+
+export type { BoardTheme };
+
 export type ButtonVariant = "default" | "primary" | "danger" | "ghost";
 export type ButtonSize = "sm" | "md" | "lg";
 
@@ -72,6 +76,10 @@ export type GalleryDataShape = {
   show_selection_stats: boolean;
   /** CSS color for the selected image frame. */
   selection_color: string;
+  /** Visual theme: light, dark, or follow system preference. */
+  theme: BoardTheme;
+  /** Token overrides merged on top of the active theme. */
+  theme_overrides: Record<string, string>;
   /** Default card chrome applied under each item's card_style. */
   card_style: CSSProperties;
   /**

@@ -228,6 +228,85 @@ def _sanitize_style(raw: Any) -> dict[str, Any]:
     return out
 
 
+_THEME_OVERRIDE_KEYS = frozenset(
+    {
+        "bg",
+        "background",
+        "surface",
+        "surfaceHover",
+        "surface_hover",
+        "border",
+        "text",
+        "muted",
+        "accent",
+        "accentSoft",
+        "accent_soft",
+        "selection",
+        "danger",
+        "dangerSoft",
+        "danger_soft",
+        "radius",
+        "shadow",
+        "panel",
+        "panelHover",
+        "panel_hover",
+    }
+)
+
+_THEME_KEY_ALIASES = {
+    "background": "bg",
+    "surface_hover": "surfaceHover",
+    "accent_soft": "accentSoft",
+    "danger_soft": "dangerSoft",
+    "panel_hover": "panelHover",
+}
+
+_THEME_KEY_TO_CSS = {
+    "bg": "--sig-bg",
+    "surface": "--sig-surface",
+    "surfaceHover": "--sig-surface-hover",
+    "border": "--sig-border",
+    "text": "--sig-text",
+    "muted": "--sig-muted",
+    "accent": "--sig-accent",
+    "accentSoft": "--sig-accent-soft",
+    "selection": "--sig-selection",
+    "danger": "--sig-danger",
+    "dangerSoft": "--sig-danger-soft",
+    "radius": "--sig-radius",
+    "shadow": "--sig-shadow",
+    "panel": "--sig-panel",
+    "panelHover": "--sig-panel-hover",
+}
+
+
+def _sanitize_theme_overrides(raw: Any) -> dict[str, str]:
+    """Return CSS-variable map for theme token overrides."""
+    if not isinstance(raw, dict):
+        return {}
+    out: dict[str, str] = {}
+    for key, value in raw.items():
+        if not isinstance(value, str):
+            continue
+        v = value.strip()
+        if not v or len(v) > 160:
+            continue
+        lower = v.lower()
+        if any(bad in lower for bad in ("url(", "expression(", "javascript:", "@import", "</")):
+            continue
+        prop = str(key)
+        if prop.startswith("--sig-"):
+            out[prop] = v
+            continue
+        if prop not in _THEME_OVERRIDE_KEYS:
+            continue
+        canon = _THEME_KEY_ALIASES.get(prop, prop)
+        css_var = _THEME_KEY_TO_CSS.get(canon)
+        if css_var:
+            out[css_var] = v
+    return out
+
+
 def _image_to_data_url(img: Image.Image, *, max_edge: int = 720) -> tuple[str, int]:
     work = img.convert("RGB")
     w, h = work.size
@@ -493,6 +572,8 @@ def st_image_board(
     show_card_info: Any = _UNSET,
     show_selection_stats: Any = _UNSET,
     selection_color: Any = _UNSET,
+    theme: Any = _UNSET,
+    theme_overrides: Any = _UNSET,
     card_style: Any = _UNSET,
     button_style: Any = _UNSET,
     selected_ids: Any = _UNSET,
@@ -556,7 +637,15 @@ def st_image_board(
         declare ``size`` / ``size_bytes``, or sizes are inferred from
         Pillow / data-URL payloads).
     selection_color:
-        CSS color for the selected image frame. Defaults to ``"#0f766e"``.
+        Optional CSS color for the selected image frame / accent. When
+        omitted, the active ``theme`` accent is used.
+    theme:
+        Board chrome: ``"light"`` (default), ``"dark"``, or ``"auto"``
+        (follow OS preference).
+    theme_overrides:
+        Dict of design tokens to override the active theme, e.g.
+        ``{"accent": "#38bdf8", "panel": "#0b1220", "text": "#e2e8f0"}``.
+        Keys also accept ``--sig-*`` CSS variable names.
     card_style:
         Default card chrome (``background``, ``color``, ``fontFamily``, …)
         applied under each item's own ``card_style``.
@@ -647,7 +736,15 @@ def st_image_board(
     show_hover_text = bool(pick("show_hover_text", True, show_hover_text))
     show_card_info = bool(pick("show_card_info", True, show_card_info))
     show_selection_stats = bool(pick("show_selection_stats", True, show_selection_stats))
-    selection_color = str(pick("selection_color", "#0f766e", selection_color))
+    selection_raw = pick("selection_color", None, selection_color)
+    selection_color = (
+        str(selection_raw).strip()
+        if isinstance(selection_raw, str) and str(selection_raw).strip()
+        else ""
+    )
+    theme_raw = str(pick("theme", "light", theme) or "light").lower()
+    theme = theme_raw if theme_raw in {"light", "dark", "auto"} else "light"
+    theme_overrides = pick("theme_overrides", None, theme_overrides)
     card_style = pick("card_style", None, card_style)
     button_style = pick("button_style", None, button_style)
     selected_ids = pick("selected_ids", None, selected_ids)
@@ -707,7 +804,9 @@ def st_image_board(
         "show_hover_text": bool(show_hover_text),
         "show_card_info": bool(show_card_info),
         "show_selection_stats": bool(show_selection_stats),
-        "selection_color": str(selection_color or "#0f766e"),
+        "selection_color": selection_color,
+        "theme": theme,
+        "theme_overrides": _sanitize_theme_overrides(theme_overrides),
         "card_style": _sanitize_style(card_style),
         "button_style": _sanitize_style(button_style),
         "selected_ids": initial_selected,

@@ -4,7 +4,7 @@ Do these in order for a **first** release: **GitHub → PyPI → Streamlit `.app
 
 For later releases, see [Updating an existing release](#updating-an-existing-release).
 
-Current package version: **0.2.0**
+Current package version: **0.3.0**
 
 ---
 
@@ -52,7 +52,7 @@ uv run python scripts/make_usage_gif.py
 git add .
 git status   # no .venv, node_modules, __pycache__, .ruff_cache
 git commit -m "$(cat <<'EOF'
-Release 0.2.0: layout steppers, paging, button theme, PD demos.
+Release 0.3.0: light/dark theming with token overrides.
 
 EOF
 )"

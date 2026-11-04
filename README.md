@@ -10,11 +10,12 @@ Named **image-board** (not gallery) to avoid clashing with existing
 cards, and toolbar actions update **inside the widget** — no full Streamlit
 rerun for every toggle.
 
-**Version:** 0.2.0
+**Version:** 0.3.0
 
 ## Features
 
 - CSS grid of image cards (configurable columns / gap)
+- **Light / dark / auto** theming with token overrides
 - Optional **Columns / Rows steppers** (`show_layout_controls`)
 - Configurable **image click**: `select` | `open` | `none` (per item or board-wide)
 - Optional **checkboxes** kept in sync with the same selection
@@ -106,6 +107,26 @@ csv = result.selected_csv   # "a,b"
 n = result.selected_count   # 2
 size = result.selected_size # e.g. "240.0 KB" when sizes are known
 ```
+
+### Light / dark theme
+
+```python
+result = st_image_board(
+    items,
+    theme="dark",  # "light" | "dark" | "auto"
+    theme_overrides={
+        "accent": "#38bdf8",
+        "panel": "#0b1220",
+        "text": "#e2e8f0",
+        "border": "rgba(148,163,184,0.35)",
+    },
+    # selection_color="#38bdf8",  # optional accent override
+)
+```
+
+Tokens: `bg`, `panel`, `surface`, `surfaceHover`, `border`, `text`, `muted`,
+`accent`, `accentSoft`, `selection`, `danger`, `dangerSoft`, `radius`, `shadow`
+(or raw `--sig-*` CSS variables).
 
 ### Button aesthetics
 

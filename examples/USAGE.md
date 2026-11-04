@@ -71,11 +71,22 @@ result = st_image_board(
 )
 ```
 
+## Light / dark theme
+
+```python
+result = st_image_board(
+    items,
+    theme="dark",  # or "light" / "auto"
+    theme_overrides={"accent": "#2dd4bf", "panel": "#1e293b"},
+)
+```
+
 ## Image-only cards + button theme
 
 ```python
 result = st_image_board(
     items,
+    theme="light",
     show_card_info=False,
     button_style={
         "borderRadius": "999px",

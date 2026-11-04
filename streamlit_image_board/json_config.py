@@ -16,6 +16,8 @@ BOARD_OPTION_KEYS = frozenset(
         "show_card_info",
         "show_selection_stats",
         "selection_color",
+        "theme",
+        "theme_overrides",
         "card_style",
         "button_style",
         "selected_ids",

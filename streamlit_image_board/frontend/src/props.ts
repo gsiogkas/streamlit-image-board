@@ -6,6 +6,7 @@ import type {
   ImageClickMode,
 } from "./types";
 import { sanitizeStyle } from "./styleSanitize";
+import { normalizeTheme, themeOverridesToCssVars } from "./theme";
 
 function asImageClick(raw: unknown): ImageClickMode | null {
   if (raw === "select" || raw === "open" || raw === "none") return raw;
@@ -147,7 +148,7 @@ export function normalizeGalleryProps(
   const selectionColor =
     typeof p.selection_color === "string" && p.selection_color.trim()
       ? p.selection_color.trim()
-      : "#0f766e";
+      : "";
 
   const imageClick =
     asImageClick(p.image_click) ??
@@ -165,6 +166,17 @@ export function normalizeGalleryProps(
     show_card_info: p.show_card_info !== false,
     show_selection_stats: p.show_selection_stats !== false,
     selection_color: selectionColor,
+    theme: normalizeTheme(p.theme),
+    theme_overrides: (() => {
+      const vars = themeOverridesToCssVars(
+        (p.theme_overrides ?? {}) as Record<string, unknown>,
+      );
+      const out: Record<string, string> = {};
+      for (const [k, v] of Object.entries(vars as Record<string, unknown>)) {
+        if (typeof v === "string") out[k] = v;
+      }
+      return out;
+    })(),
     card_style: sanitizeStyle(p.card_style),
     button_style: sanitizeStyle(p.button_style),
     selected_ids,

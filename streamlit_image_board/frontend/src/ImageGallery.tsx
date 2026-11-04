@@ -11,6 +11,7 @@ import {
 
 import { selectedIdsKey } from "./props";
 import { buttonStyleToCssVars } from "./styleSanitize";
+import { resolveTheme } from "./theme";
 import type {
   GalleryButton,
   GalleryDataShape,
@@ -564,9 +565,27 @@ export default function ImageGallery({
     setPage(Math.max(0, pageCount - 1));
   }, [pageCount]);
 
+  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(() =>
+    resolveTheme(data.theme),
+  );
+
+  useEffect(() => {
+    setResolvedTheme(resolveTheme(data.theme));
+    if (data.theme !== "auto" || typeof window === "undefined") return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => setResolvedTheme(resolveTheme("auto"));
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, [data.theme]);
+
   const rootStyle: CSSProperties = {
-    ["--sig-selection" as string]: data.selection_color,
-    ["--sig-accent" as string]: data.selection_color,
+    ...data.theme_overrides,
+    ...(data.selection_color
+      ? {
+          ["--sig-selection" as string]: data.selection_color,
+          ["--sig-accent" as string]: data.selection_color,
+        }
+      : {}),
     ...buttonStyleToCssVars(data.button_style),
   };
 
@@ -645,7 +664,11 @@ export default function ImageGallery({
     data.show_layout_controls;
 
   return (
-    <div className="sig-root" style={rootStyle}>
+    <div
+      className={`sig-root sig-theme-${resolvedTheme}`}
+      data-theme={resolvedTheme}
+      style={rootStyle}
+    >
       {showToolbar ? (
         <div className="sig-toolbar">
           {data.selectable ? (

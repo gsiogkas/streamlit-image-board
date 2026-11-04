@@ -164,7 +164,15 @@ pager_position = st.sidebar.selectbox(
     help="First / Prev / Next / Last placement when paging is on.",
 )
 fit = st.sidebar.selectbox("Thumbnail fit", ["cover", "contain"])
-selection_color = st.sidebar.color_picker("Selection frame", "#0f766e")
+theme = st.sidebar.selectbox(
+    "Theme",
+    ["light", "dark", "auto"],
+    help="Board chrome. auto follows the OS color scheme.",
+)
+override_selection = st.sidebar.checkbox("Override selection / accent color", False)
+selection_color = (
+    st.sidebar.color_picker("Selection frame", "#0f766e") if override_selection else None
+)
 use_default_chrome = st.sidebar.checkbox("Apply default card chrome", False)
 default_bg = st.sidebar.color_picker("Default card background", "#ffffff")
 default_fg = st.sidebar.color_picker("Default card text", "#0f172a")
@@ -222,6 +230,7 @@ result = st_image_board(
     card_texts=(
         [{"id": "hint", "text": "tap image", "variant": "muted"}] if show_card_info else None
     ),
+    theme=theme,
     selection_color=selection_color,
     card_style=(
         {

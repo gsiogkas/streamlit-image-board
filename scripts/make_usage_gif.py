@@ -188,7 +188,7 @@ def main() -> None:
     OUT.parent.mkdir(parents=True, exist_ok=True)
     frames: list[Image.Image] = []
     sequence: list[tuple[set[int], int | None, str, int]] = [
-        (set(), None, "0.2 · columns/rows steppers · paging", 12),
+        (set(), None, "0.3 · light/dark theme · layout steppers", 12),
         (set(), 0, "Hover shows overlay text", 10),
         ({0}, 0, "Click image → selection frame", 10),
         ({0, 2, 3}, None, "Multi-select via image or checkbox", 12),

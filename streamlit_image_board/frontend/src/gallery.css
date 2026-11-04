@@ -1,5 +1,8 @@
 .sig-root {
+  /* Light defaults (also .sig-theme-light) */
   --sig-bg: transparent;
+  --sig-panel: #ffffff;
+  --sig-panel-hover: #f8fafc;
   --sig-surface: rgba(15, 23, 42, 0.04);
   --sig-surface-hover: rgba(15, 23, 42, 0.08);
   --sig-border: rgba(15, 23, 42, 0.12);
@@ -12,9 +15,14 @@
   --sig-danger-soft: rgba(185, 28, 28, 0.12);
   --sig-radius: 10px;
   --sig-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --sig-card-hover-border: rgba(15, 118, 110, 0.35);
+  --sig-card-hover-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+  --sig-check-bg: #ffffff;
+  --sig-overlay-fg: #ffffff;
 
   box-sizing: border-box;
   color: var(--sig-text);
+  color-scheme: light;
   font-family:
     "Segoe UI",
     ui-sans-serif,
@@ -31,6 +39,36 @@
   padding: 2px;
   background: var(--sig-bg);
   user-select: none;
+}
+
+.sig-root.sig-theme-dark {
+  color-scheme: dark;
+  --sig-bg: transparent;
+  --sig-panel: #1e293b;
+  --sig-panel-hover: #334155;
+  --sig-surface: rgba(148, 163, 184, 0.12);
+  --sig-surface-hover: rgba(148, 163, 184, 0.2);
+  --sig-border: rgba(148, 163, 184, 0.28);
+  --sig-text: #e2e8f0;
+  --sig-muted: #94a3b8;
+  --sig-accent: #2dd4bf;
+  --sig-accent-soft: rgba(45, 212, 191, 0.18);
+  --sig-selection: var(--sig-accent);
+  --sig-danger: #f87171;
+  --sig-danger-soft: rgba(248, 113, 113, 0.18);
+  --sig-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --sig-card-hover-border: rgba(45, 212, 191, 0.45);
+  --sig-card-hover-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+  --sig-check-bg: #0f172a;
+  --sig-overlay-fg: #f8fafc;
+  --sig-btn-bg: var(--sig-panel);
+  --sig-btn-fg: var(--sig-text);
+  --sig-btn-border: var(--sig-border);
+  --sig-btn-primary-bg: var(--sig-accent);
+  --sig-btn-primary-fg: #042f2e;
+  --sig-btn-danger-bg: var(--sig-danger-soft);
+  --sig-btn-danger-fg: var(--sig-danger);
+  --sig-btn-shadow: var(--sig-shadow);
 }
 
 .sig-root *,
@@ -71,7 +109,7 @@
   padding: 4px 8px;
   border: 1px solid var(--sig-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--sig-panel);
   box-shadow: var(--sig-shadow);
   cursor: pointer;
   font: inherit;
@@ -89,7 +127,7 @@
   background: color-mix(
     in srgb,
     var(--sig-selection, var(--sig-accent)) 12%,
-    #fff
+    var(--sig-panel)
   );
 }
 
@@ -101,7 +139,7 @@
   display: inline-block;
   position: relative;
   flex: 0 0 auto;
-  background: #fff;
+  background: var(--sig-check-bg);
 }
 
 .sig-select-all-master-on .sig-select-all-box,
@@ -117,7 +155,7 @@
   top: 0px;
   width: 5px;
   height: 9px;
-  border: solid #fff;
+  border: solid var(--sig-overlay-fg);
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
@@ -141,7 +179,7 @@
   appearance: none;
   border: var(--sig-btn-border-width, 1px) var(--sig-btn-border-style, solid)
     var(--sig-btn-border, var(--sig-border));
-  background: var(--sig-btn-bg, #fff);
+  background: var(--sig-btn-bg, var(--sig-panel));
   color: var(--sig-btn-fg, var(--sig-text));
   border-radius: var(--sig-btn-radius, 8px);
   padding: var(--sig-btn-padding, 6px 10px);
@@ -185,7 +223,7 @@
 .sig-btn-primary {
   background: var(--sig-btn-primary-bg, var(--sig-accent));
   border-color: transparent;
-  color: var(--sig-btn-primary-fg, #fff);
+  color: var(--sig-btn-primary-fg, var(--sig-overlay-fg));
 }
 
 .sig-btn-primary:hover:not(:disabled) {
@@ -237,7 +275,7 @@
   padding: 2px 4px;
   border: 1px solid var(--sig-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--sig-panel);
   box-shadow: var(--sig-shadow);
 }
 
@@ -298,7 +336,7 @@
   flex-direction: column;
   border: 1px solid var(--sig-border);
   border-radius: var(--sig-radius);
-  background: #fff;
+  background: var(--sig-panel);
   color: var(--sig-card-fg);
   overflow: hidden;
   box-shadow: var(--sig-shadow);
@@ -310,8 +348,8 @@
 }
 
 .sig-card:hover {
-  border-color: rgba(15, 118, 110, 0.35);
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+  border-color: var(--sig-card-hover-border);
+  box-shadow: var(--sig-card-hover-shadow);
   transform: translateY(-1px);
 }
 
@@ -380,7 +418,7 @@
   bottom: 0;
   z-index: 2;
   padding: 28px 10px 10px;
-  color: #fff;
+  color: var(--sig-overlay-fg);
   font-weight: 650;
   font-size: 12px;
   line-height: 1.3;
