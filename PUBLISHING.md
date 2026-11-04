@@ -4,7 +4,7 @@ Do these in order for a **first** release: **GitHub → PyPI → Streamlit `.app
 
 For later releases, see [Updating an existing release](#updating-an-existing-release).
 
-Current package version: **0.3.0**
+Current package version: **0.4.0**
 
 ---
 
@@ -52,7 +52,7 @@ uv run python scripts/make_usage_gif.py
 git add .
 git status   # no .venv, node_modules, __pycache__, .ruff_cache
 git commit -m "$(cat <<'EOF'
-Release 0.3.0: light/dark theming with token overrides.
+Release 0.4.0: host-controlled paging, chrome-only mode, selection sync.
 
 EOF
 )"
@@ -238,10 +238,10 @@ cd ../..
 
 ```bash
 git add .
-git commit -m "Release 0.2.0: <short summary of changes>"
+git commit -m "Release 0.4.0: <short summary of changes>"
 git push origin main
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.4.0
+git push origin v0.4.0
 ```
 
 ### B. Publish the new version to PyPI

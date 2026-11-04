@@ -18,6 +18,8 @@ from streamlit_image_board.selection import (
     aggrid_preselected_rows,
     configure_aggrid_selection,
     filter_rows_by_ids,
+    finalize_aggrid_selection,
+    merge_page_selection,
     merge_selection_sources,
     normalize_selected_ids,
     selected_ids_from_aggrid,
@@ -71,6 +73,9 @@ class BoardResult:
         Live column count from layout controls (falls back to host ``columns``).
     layout_rows:
         Live rows-per-page from layout controls (``None`` when unused).
+    page_index:
+        Live 0-based page when host-controlled paging is active
+        (``total_count`` set); otherwise ``0``.
     clicked_button:
         Id of the last toolbar / per-item button pressed, or None.
     clicked_item:
@@ -86,6 +91,7 @@ class BoardResult:
     selected_size: str = ""
     layout_columns: int | None = None
     layout_rows: int | None = None
+    page_index: int = 0
     clicked_button: str | None = None
     clicked_item: str | None = None
     action_nonce: int = 0
@@ -352,7 +358,12 @@ def _resolve_local_image(src: str) -> tuple[str, int] | None:
         return _image_to_data_url(img)
 
 
-def _normalize_item(raw: BoardItemInput, index: int) -> dict[str, Any]:
+def _normalize_item(
+    raw: BoardItemInput,
+    index: int,
+    *,
+    require_image: bool = True,
+) -> dict[str, Any]:
     if isinstance(raw, Image.Image):
         label = f"Image {index + 1}"
         src, nbytes = _image_to_data_url(raw)
@@ -412,7 +423,10 @@ def _normalize_item(raw: BoardItemInput, index: int) -> dict[str, Any]:
         if local is not None:
             src, encoded_bytes = local
     if not isinstance(src, str) or not src:
-        raise ValueError(f"Gallery item {item_id!r} needs a src/url/image")
+        # Chrome-only / stats stubs may omit images when cards are hidden.
+        if require_image:
+            raise ValueError(f"Gallery item {item_id!r} needs a src/url/image")
+        src = ""
 
     buttons = raw.get("buttons") or []
     if not isinstance(buttons, (list, tuple)):
@@ -588,6 +602,9 @@ def st_image_board(
     rows: Any = _UNSET,
     show_layout_controls: Any = _UNSET,
     pager_position: Any = _UNSET,
+    total_count: Any = _UNSET,
+    page_index: Any = _UNSET,
+    show_items: Any = _UNSET,
     thumbnail_fit: Any = _UNSET,
     empty_message: Any = _UNSET,
     key: str | None = None,
@@ -694,6 +711,17 @@ def st_image_board(
         ``layout_columns`` / ``layout_rows`` on :class:`BoardResult`.
     pager_position:
         Where to place the pager: ``"top"`` (default) or ``"bottom"``.
+    total_count:
+        When set (>= 0), enable **host-controlled paging**: the board treats
+        ``items`` as the current page only, computes page count from
+        ``total_count``, and returns ``page_index`` for the host to slice.
+        Omit / ``None`` for legacy in-widget paging over the full ``items`` list.
+    page_index:
+        Controlled 0-based page when ``total_count`` is set. Defaults to ``0``.
+    show_items:
+        When ``False``, render toolbar / layout / pager only (no card grid).
+        Useful for sharing board chrome with another view (``st.dataframe``,
+        AgGrid, …). Image-less size stubs are allowed in this mode.
     thumbnail_fit:
         CSS ``object-fit`` for thumbnails: ``cover`` (default) or ``contain``.
     empty_message:
@@ -769,11 +797,26 @@ def st_image_board(
     show_layout_controls = bool(pick("show_layout_controls", False, show_layout_controls))
     pager_pos_raw = str(pick("pager_position", "top", pager_position) or "top").lower()
     pager_position_s = "bottom" if pager_pos_raw == "bottom" else "top"
+    total_count_raw = pick("total_count", None, total_count)
+    try:
+        total_count_n = (
+            -1 if total_count_raw is None else max(-1, int(total_count_raw))
+        )
+    except (TypeError, ValueError):
+        total_count_n = -1
+    try:
+        page_index_n = max(0, int(pick("page_index", 0, page_index) or 0))
+    except (TypeError, ValueError):
+        page_index_n = 0
+    show_items_b = bool(pick("show_items", True, show_items))
     thumbnail_fit = str(pick("thumbnail_fit", "cover", thumbnail_fit))
     empty_message = str(pick("empty_message", "No images", empty_message))
 
     click_mode = _normalize_image_click(image_click, selectable=selectable)
-    normalized = [_normalize_item(item, i) for i, item in enumerate(raw_items)]
+    normalized = [
+        _normalize_item(item, i, require_image=show_items_b)
+        for i, item in enumerate(raw_items)
+    ]
     shared_card_buttons = _normalize_buttons(card_buttons)
     shared_card_texts = _normalize_texts(card_texts)
     if shared_card_buttons or shared_card_texts:
@@ -790,7 +833,12 @@ def st_image_board(
         # Layout steppers default to 2 rows → enable paging immediately.
         rows_n = 2
         page_size_n = cols * rows_n
-    component_height = int(height) if height is not None else int(max_height)
+    if height is not None:
+        component_height = int(height)
+    elif not show_items_b:
+        component_height = 120
+    else:
+        component_height = int(max_height)
     initial_selected = [str(x) for x in (selected_ids or [])]
 
     data = {
@@ -818,6 +866,9 @@ def st_image_board(
         "rows": rows_n,
         "show_layout_controls": bool(show_layout_controls),
         "pager_position": pager_position_s,
+        "total_count": total_count_n,
+        "page_index": page_index_n,
+        "show_items": bool(show_items_b),
         "thumbnail_fit": "contain" if thumbnail_fit == "contain" else "cover",
         "empty_message": str(empty_message),
     }
@@ -833,6 +884,7 @@ def st_image_board(
             "action_nonce": 0,
             "layout_columns": cols,
             "layout_rows": rows_n or None,
+            "page_index": page_index_n if total_count_n >= 0 else None,
         },
         on_selected_ids_change=_noop,
         on_selected_csv_change=_noop,
@@ -841,6 +893,7 @@ def st_image_board(
         on_action_nonce_change=_noop,
         on_layout_columns_change=_noop,
         on_layout_rows_change=_noop,
+        on_page_index_change=_noop,
         height=component_height,
     )
 
@@ -861,6 +914,15 @@ def st_image_board(
         layout_rows_i = int(layout_rows) if layout_rows is not None else (rows_n or None)
     except (TypeError, ValueError):
         layout_rows_i = rows_n or None
+    raw_page = getattr(raw, "page_index", None)
+    try:
+        page_index_out = (
+            page_index_n
+            if raw_page is None
+            else max(0, int(raw_page))
+        )
+    except (TypeError, ValueError):
+        page_index_out = page_index_n
 
     return BoardResult(
         selected_ids=ids,
@@ -870,6 +932,7 @@ def st_image_board(
         selected_size=format_bytes(total_bytes) if sized else "",
         layout_columns=layout_cols_i,
         layout_rows=layout_rows_i,
+        page_index=page_index_out,
         clicked_button=getattr(raw, "clicked_button", None),
         clicked_item=getattr(raw, "clicked_item", None),
         action_nonce=int(getattr(raw, "action_nonce", 0) or 0),
@@ -887,9 +950,11 @@ __all__ = [
     "aggrid_preselected_rows",
     "configure_aggrid_selection",
     "filter_rows_by_ids",
+    "finalize_aggrid_selection",
     "format_bytes",
     "load_board_config",
     "load_board_items",
+    "merge_page_selection",
     "merge_selection_sources",
     "normalize_selected_ids",
     "parse_size_bytes",

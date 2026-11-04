@@ -106,6 +106,16 @@ export type GalleryDataShape = {
   show_layout_controls: boolean;
   /** Where to render First/Prev/Next/Last when paging. */
   pager_position: "top" | "bottom";
+  /**
+   * When >= 0, host owns paging: pageCount uses total_count, items are the
+   * current page only (no client slice), and page_index is controlled.
+   * Use -1 to disable (legacy: page from items.length).
+   */
+  total_count: number;
+  /** Controlled 0-based page index when total_count >= 0. */
+  page_index: number;
+  /** When false, render toolbar/layout/pager only (no card grid). */
+  show_items: boolean;
   thumbnail_fit: "cover" | "contain";
   empty_message: string;
 };
@@ -121,4 +131,6 @@ export type GalleryStateShape = {
   layout_columns: number | null;
   /** Live rows from layout controls (or host). */
   layout_rows: number | null;
+  /** Live 0-based page index (controlled / host-echoed paging). */
+  page_index: number | null;
 };

@@ -10,7 +10,7 @@ Named **image-board** (not gallery) to avoid clashing with existing
 cards, and toolbar actions update **inside the widget** — no full Streamlit
 rerun for every toggle.
 
-**Version:** 0.3.0
+**Version:** 0.4.0
 
 ## Features
 
@@ -26,10 +26,12 @@ rerun for every toggle.
 - **JSON** items / full board config (file path, string, or dict)
 - Toolbar **selection counter**: file count + total size
 - Optional **paging** (`page_size` or `rows`) — overflow to next page; checklist spans all pages
+- **Host-controlled paging** (`total_count` / `page_index`) for large catalogs — board pager, host slices
+- **Chrome-only mode** (`show_items=False`) — toolbar / layout / pager without card grid (pair with `st.dataframe` or AgGrid)
 - **Image-only cards** via `show_card_info=False`
 - Configurable **button aesthetics** (`button_style`, `variant` / `size` / `style`)
-- Shared checklist contract for **AgGrid** (classic + v2)
-- Returns `selected_ids`, size stats, and live `layout_columns` / `layout_rows`
+- Shared checklist helpers: `merge_page_selection`, AgGrid bridge (classic + v2)
+- Returns `selected_ids`, size stats, `page_index`, and live `layout_columns` / `layout_rows`
 
 ## Install
 
@@ -194,6 +196,33 @@ st.write(result.layout_columns, result.layout_rows)
 
 Hide steppers with `show_layout_controls=False`. Selection stays **global** across pages.
 
+### Host-controlled paging (large catalogs)
+
+When the host already slices the catalog (e.g. AWS thumbs), pass the **page
+slice** as `items` plus:
+
+```python
+result = st_image_board(
+    page_items,
+    columns=4,
+    rows=2,
+    show_layout_controls=True,
+    total_count=total,          # full filtered count
+    page_index=page,            # 0-based; board pager writes back
+    show_items=True,            # False → chrome only (toolbar/pager/layout)
+)
+# result.page_index / layout_columns / layout_rows → re-slice next run
+```
+
+Merge page-local `selected_ids` into a global checklist with
+`merge_page_selection` / `sync_checklist(..., page_ids=…)`.
+
+**Chrome-only + size stubs:** with `show_items=False`, items may omit
+`src`/`image` (image-board skips the image requirement) and still feed
+`size_bytes` so the toolbar can show `N selected · X MB`. Remount the
+component when switching views (`key` includes a view nonce) so a stale
+React selection cannot resurrect ids cleared by another widget.
+
 ### Selection size counter
 
 Pass `size` / `size_bytes` on items (int bytes, or strings like `"1.5 MB"`).
@@ -298,6 +327,7 @@ Allowed style keys are sanitized (color, background, fontFamily, padding, …).
 | `selected_size` | Human-readable total (or `""`) |
 | `layout_columns` | Live column count (layout steppers / host) |
 | `layout_rows` | Live rows per page (`None` if unused) |
+| `page_index` | Live 0-based page when host-controlled paging is on |
 | `clicked_button` | Last toolbar/card button id |
 | `clicked_item` | Item id for card button / activation |
 | `action_nonce` | Increments on each action so repeats are detectable |

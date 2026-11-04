@@ -16,6 +16,7 @@ export type GalleryChangePayload = {
   action_nonce: number;
   layout_columns: number | null;
   layout_rows: number | null;
+  page_index: number | null;
 };
 
 export type MountController = {
@@ -39,6 +40,7 @@ export function mountImageGallery(
     action_nonce: 0,
     layout_columns: current.columns,
     layout_rows: current.rows > 0 ? current.rows : null,
+    page_index: current.total_count >= 0 ? current.page_index : null,
   };
 
   const setStateValue: GallerySetStateValue = (name, value) => {
@@ -78,6 +80,11 @@ export function mountImageGallery(
       latest = {
         ...latest,
         layout_rows: typeof value === "number" ? value : null,
+      };
+    } else if (name === "page_index") {
+      latest = {
+        ...latest,
+        page_index: typeof value === "number" ? value : null,
       };
     }
     onChange?.(latest);

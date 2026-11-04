@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "streamlit-image-board"
-version = "0.3.0"
+version = "0.4.0"
 description = "Snappy React selectable image board for Streamlit (Components v2)"
 readme = "README.md"
 license = "MIT"

@@ -97,8 +97,17 @@ def _rows_from_aggrid_payload(payload: Any) -> list[dict[str, Any]]:
         rows = payload.selected_rows
     elif isinstance(payload, dict) and "selected_rows" in payload:
         rows = payload.get("selected_rows")
+    # aggrid-v2 sometimes exposes the selection under these names instead.
+    elif hasattr(payload, "selectedData"):
+        rows = payload.selectedData
+    elif isinstance(payload, dict) and "selectedData" in payload:
+        rows = payload.get("selectedData")
 
     if rows is None:
+        return []
+
+    # Empty DataFrame / Series → no selection (avoid treating as one blank row).
+    if hasattr(rows, "empty") and bool(rows.empty):
         return []
 
     # pandas DataFrame (optional dependency)
@@ -121,6 +130,13 @@ def _rows_from_aggrid_payload(payload: Any) -> list[dict[str, Any]]:
                 out.append(row)
             elif hasattr(row, "_asdict"):
                 out.append(dict(row._asdict()))
+            elif hasattr(row, "to_dict"):
+                try:
+                    out.append(dict(row.to_dict()))
+                    continue
+                except Exception:
+                    pass
+                out.append({"id": row})
             else:
                 # Fallback: treat as id scalar.
                 out.append({"id": row})
@@ -260,6 +276,30 @@ def merge_selection_sources(
     return normalize_selected_ids(merged, item_order=item_order)
 
 
+def merge_page_selection(
+    global_ids: Sequence[str] | Any,
+    page_ids: Sequence[str],
+    widget_selected: Sequence[str] | Any,
+    *,
+    item_order: Sequence[str] | None = None,
+) -> list[str]:
+    """Merge a page-local widget selection into a global checklist.
+
+    Keeps ids that are not on the current page; replaces on-page membership
+    with ``widget_selected``. Use whenever the board / AgGrid only receives a
+    host page slice (otherwise adopting widget ids wholesale drops off-page
+    selections).
+    """
+    previous = normalize_selected_ids(global_ids, item_order=item_order)
+    page = {str(x) for x in page_ids if x is not None and str(x) != ""}
+    widget = normalize_selected_ids(widget_selected)
+    kept = [i for i in previous if i not in page]
+    added = [i for i in widget if i in page]
+    # Preserve any widget ids that somehow fall outside page (defensive).
+    extras = [i for i in widget if i not in page and i not in kept]
+    return normalize_selected_ids([*kept, *added, *extras], item_order=item_order)
+
+
 def sync_checklist(
     *,
     session_state: Any,
@@ -268,6 +308,7 @@ def sync_checklist(
     aggrid: Any = None,
     id_column: str = "id",
     item_order: Sequence[str] | None = None,
+    page_ids: Sequence[str] | None = None,
 ) -> list[str]:
     """Bidirectional sync helper for Streamlit ``session_state``.
 
@@ -278,6 +319,7 @@ def sync_checklist(
             board=board_result,
             aggrid=grid_response,
             id_column=\"id\",
+            page_ids=[r.id for r in page_records],
         )
         # pass sel into st_image_board(selected_ids=sel) and
         # configure_selection(..., pre_selected_rows=aggrid_preselected_rows(df, sel))
@@ -289,6 +331,9 @@ def sync_checklist(
     2. Else if AgGrid ids change after that echo (or after the first snapshot)
        → adopt AgGrid, including an intentional empty / deselect-all.
     3. Else keep session.
+
+    When ``page_ids`` is set, board/AgGrid payloads are treated as **page-local**
+    and merged via :func:`merge_page_selection` so off-page ids survive.
     """
     previous = normalize_selected_ids(
         session_state.get(key, []),
@@ -296,9 +341,18 @@ def sync_checklist(
     )
     snap_key = f"{key}__aggrid_snap"
     await_key = f"{key}__await_aggrid"
-    board_ids = (
-        normalize_selected_ids(board, item_order=item_order) if board is not None else previous
-    )
+
+    def _as_global(widget_payload: Any) -> list[str]:
+        if page_ids is None:
+            return normalize_selected_ids(widget_payload, item_order=item_order)
+        return merge_page_selection(
+            previous,
+            page_ids,
+            widget_payload,
+            item_order=item_order,
+        )
+
+    board_ids = _as_global(board) if board is not None else previous
 
     next_ids = previous
 
@@ -307,7 +361,9 @@ def sync_checklist(
         session_state[snap_key] = list(next_ids)
         session_state[await_key] = True
     elif aggrid is not None:
-        aggrid_ids = selected_ids_from_aggrid(aggrid, id_column=id_column, item_order=item_order)
+        aggrid_ids = _as_global(
+            selected_ids_from_aggrid(aggrid, id_column=id_column)
+        )
         awaiting = bool(session_state.get(await_key))
         if awaiting:
             if aggrid_ids == previous:
@@ -342,6 +398,10 @@ def configure_aggrid_selection(
 
     Requires ``streamlit-aggrid`` / ``streamlit-aggrid-v2``. Returns the
     builder for chaining.
+
+    After ``builder.build()``, pass the options through
+    :func:`finalize_aggrid_selection` so AG Grid 32+ / aggrid-v2 actually
+    renders the checkbox column.
     """
     pre = aggrid_preselected_rows(data, selected_ids, id_column=id_column)
     grid_options_builder.configure_selection(
@@ -354,10 +414,54 @@ def configure_aggrid_selection(
     return grid_options_builder
 
 
+def finalize_aggrid_selection(
+    grid_options: dict[str, Any],
+    *,
+    selection_mode: str = "multiple",
+    use_checkbox: bool = True,
+    header_checkbox: bool = True,
+) -> dict[str, Any]:
+    """Patch built ``gridOptions`` so selection checkboxes render on AG Grid 32+.
+
+    ``streamlit-aggrid-v2`` ships AG Grid 36, which ignores legacy
+    ``checkboxSelection`` on data columns unless ``rowSelection`` uses the
+    object form (``mode`` / ``checkboxes``). Call this after
+    ``GridOptionsBuilder.build()``.
+    """
+    if selection_mode == "disabled":
+        grid_options.pop("rowSelection", None)
+        grid_options.pop("selectionColumnDef", None)
+        return grid_options
+
+    mode = "multiRow" if selection_mode == "multiple" else "singleRow"
+    grid_options["rowSelection"] = {
+        "mode": mode,
+        "checkboxes": bool(use_checkbox),
+        "headerCheckbox": bool(header_checkbox) and selection_mode == "multiple",
+        "enableClickSelection": True,
+    }
+    if use_checkbox:
+        grid_options["selectionColumnDef"] = {
+            "pinned": "left",
+            "width": 50,
+            "maxWidth": 56,
+            "suppressAutoSize": True,
+            "resizable": False,
+        }
+    for col in grid_options.get("columnDefs") or []:
+        if isinstance(col, dict):
+            col.pop("checkboxSelection", None)
+            col.pop("headerCheckboxSelection", None)
+            col.pop("headerCheckboxSelectionFilteredOnly", None)
+    return grid_options
+
+
 __all__ = [
     "aggrid_preselected_rows",
     "configure_aggrid_selection",
+    "finalize_aggrid_selection",
     "filter_rows_by_ids",
+    "merge_page_selection",
     "merge_selection_sources",
     "normalize_selected_ids",
     "selected_ids_from_aggrid",

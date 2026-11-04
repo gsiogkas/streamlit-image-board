@@ -28,7 +28,8 @@ export type GallerySetStateValue = (
     | "clicked_item"
     | "action_nonce"
     | "layout_columns"
-    | "layout_rows",
+    | "layout_rows"
+    | "page_index",
   value: string[] | string | number | null,
 ) => void;
 
@@ -414,43 +415,65 @@ export default function ImageGallery({
   }, [columns, rows, pushLayout]);
 
   const effectiveColumns = columns;
+  const hostPaged = data.total_count >= 0;
   const pageSize = useMemo(() => {
     if (rows > 0) return Math.max(1, effectiveColumns * rows);
     if (data.page_size > 0) return data.page_size;
     return 0;
   }, [data.page_size, effectiveColumns, rows]);
 
+  const catalogSize = hostPaged ? data.total_count : data.items.length;
   const pageCount = pageSize
-    ? Math.max(1, Math.ceil(data.items.length / pageSize))
+    ? Math.max(1, Math.ceil(Math.max(0, catalogSize) / pageSize) || 1)
     : 1;
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useState(() =>
+    Math.min(Math.max(0, data.page_index || 0), Math.max(0, pageCount - 1)),
+  );
+
+  const pushPage = useCallback(
+    (next: number) => {
+      const clamped = Math.min(Math.max(0, next), Math.max(0, pageCount - 1));
+      setPage(clamped);
+      if (hostPaged) setStateValue("page_index", clamped);
+    },
+    [hostPaged, pageCount, setStateValue],
+  );
 
   useEffect(() => {
+    if (hostPaged) {
+      const hostPage = Math.min(
+        Math.max(0, data.page_index || 0),
+        Math.max(0, pageCount - 1),
+      );
+      setPage(hostPage);
+      return;
+    }
     setPage((prev) => Math.min(Math.max(0, prev), pageCount - 1));
-  }, [pageCount, itemIdsKey]);
+  }, [hostPaged, data.page_index, pageCount, itemIdsKey]);
 
   const pageItems = useMemo(() => {
-    if (!pageSize) return data.items;
+    // Host already sliced when total_count is set.
+    if (!pageSize || hostPaged) return data.items;
     const start = page * pageSize;
     return data.items.slice(start, start + pageSize);
-  }, [data.items, page, pageSize]);
+  }, [data.items, hostPaged, page, pageSize]);
 
   const onColumnsChange = useCallback(
     (next: number) => {
       setColumns(next);
       pushLayout(next, rows);
-      setPage(0);
+      pushPage(0);
     },
-    [pushLayout, rows],
+    [pushLayout, pushPage, rows],
   );
 
   const onRowsChange = useCallback(
     (next: number) => {
       setRows(next);
       pushLayout(columns, next);
-      setPage(0);
+      pushPage(0);
     },
-    [columns, pushLayout],
+    [columns, pushLayout, pushPage],
   );
 
   useEffect(() => {
@@ -463,8 +486,13 @@ export default function ImageGallery({
       return;
     }
     lastPushedSelection.current = hostSelectedKey;
-    setSelected(orderSelected(data.selected_ids, itemIds));
-  }, [hostSelectedKey, data.selected_ids, itemIds]);
+    const next = orderSelected(data.selected_ids, itemIds);
+    setSelected(next);
+    // Align Streamlit component return value with host so chrome-only /
+    // view flips don't resurrect ids cleared by the table.
+    setStateValue("selected_ids", next);
+    setStateValue("selected_csv", next.join(","));
+  }, [hostSelectedKey, data.selected_ids, itemIds, setStateValue]);
 
   const pushSelection = useCallback(
     (nextRaw: string[]) => {
@@ -554,16 +582,13 @@ export default function ImageGallery({
     else selectAll();
   }, [allSelected, clearAll, selectAll]);
 
-  const goFirst = useCallback(() => setPage(0), []);
-  const goPrev = useCallback(() => {
-    setPage((p) => Math.max(0, p - 1));
-  }, []);
-  const goNext = useCallback(() => {
-    setPage((p) => Math.min(pageCount - 1, p + 1));
-  }, [pageCount]);
-  const goLast = useCallback(() => {
-    setPage(Math.max(0, pageCount - 1));
-  }, [pageCount]);
+  const goFirst = useCallback(() => pushPage(0), [pushPage]);
+  const goPrev = useCallback(() => pushPage(page - 1), [page, pushPage]);
+  const goNext = useCallback(() => pushPage(page + 1), [page, pushPage]);
+  const goLast = useCallback(
+    () => pushPage(Math.max(0, pageCount - 1)),
+    [pageCount, pushPage],
+  );
 
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(() =>
     resolveTheme(data.theme),
@@ -596,12 +621,13 @@ export default function ImageGallery({
     width: "100%",
   };
 
-  const paging = pageSize > 0 && data.items.length > 0;
+  const paging =
+    pageSize > 0 && (hostPaged ? catalogSize > 0 : data.items.length > 0);
   const pagerOnTop = data.pager_position !== "bottom";
+  const rangeStart = catalogSize === 0 ? 0 : page * pageSize + 1;
+  const rangeEnd = Math.min(catalogSize, (page + 1) * pageSize);
   const pageLabel =
-    data.items.length === 0
-      ? "Page 0 of 0"
-      : `Page ${page + 1} of ${pageCount}`;
+    catalogSize === 0 ? "Page 0 of 0" : `Page ${page + 1} of ${pageCount}`;
 
   const pager = paging ? (
     <div className="sig-pager" role="navigation" aria-label="Board pages">
@@ -629,9 +655,7 @@ export default function ImageGallery({
         {pageLabel}
         <span className="sig-pager-range">
           {" "}
-          · {page * pageSize + 1}–
-          {Math.min(data.items.length, (page + 1) * pageSize)} of{" "}
-          {data.items.length}
+          · {rangeStart}–{rangeEnd} of {catalogSize}
         </span>
       </span>
       <button
@@ -658,9 +682,8 @@ export default function ImageGallery({
   ) : null;
 
   const showToolbar =
-    data.show_select_all ||
-    data.buttons.length > 0 ||
-    data.selectable ||
+    (data.show_items &&
+      (data.show_select_all || data.buttons.length > 0 || data.selectable)) ||
     data.show_layout_controls;
 
   return (
@@ -686,9 +709,17 @@ export default function ImageGallery({
                     enabledIds.length ? ` / ${enabledIds.length}` : ""
                   }`}
             </span>
-          ) : (
+          ) : !data.show_items && data.show_selection_stats ? (
+            // Chrome-only host mode: still announce global selection.
+            <span
+              className="sig-count"
+              title="Selected file count (host checklist)"
+            >
+              {selectionStatsLabel(selected, data.items, 0)}
+            </span>
+          ) : data.show_items ? (
             <span className="sig-count">{data.items.length} images</span>
-          )}
+          ) : null}
 
           {data.show_select_all ? (
             <div className="sig-select-all">
@@ -773,35 +804,37 @@ export default function ImageGallery({
 
       {pagerOnTop ? pager : null}
 
-      <div
-        className={paging ? "sig-page" : "sig-scroll"}
-        style={paging ? undefined : { maxHeight: data.max_height }}
-      >
-        {data.items.length === 0 ? (
-          <div className="sig-empty">{data.empty_message}</div>
-        ) : (
-          <div className="sig-grid" style={gridStyle}>
-            {pageItems.map((item) => (
-              <GalleryCard
-                key={item.id}
-                item={item}
-                selected={selected.includes(item.id)}
-                selectable={data.selectable}
-                showCheckboxes={data.show_checkboxes}
-                showHoverText={data.show_hover_text}
-                showCardInfo={data.show_card_info}
-                thumbnailFit={data.thumbnail_fit}
-                cardStyle={data.card_style}
-                imageClick={data.image_click}
-                openInNewTab={data.open_in_new_tab}
-                onToggle={toggle}
-                onOpen={onOpen}
-                onButton={onCardButton}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      {data.show_items ? (
+        <div
+          className={paging ? "sig-page" : "sig-scroll"}
+          style={paging ? undefined : { maxHeight: data.max_height }}
+        >
+          {data.items.length === 0 ? (
+            <div className="sig-empty">{data.empty_message}</div>
+          ) : (
+            <div className="sig-grid" style={gridStyle}>
+              {pageItems.map((item) => (
+                <GalleryCard
+                  key={item.id}
+                  item={item}
+                  selected={selected.includes(item.id)}
+                  selectable={data.selectable}
+                  showCheckboxes={data.show_checkboxes}
+                  showHoverText={data.show_hover_text}
+                  showCardInfo={data.show_card_info}
+                  thumbnailFit={data.thumbnail_fit}
+                  cardStyle={data.card_style}
+                  imageClick={data.image_click}
+                  openInNewTab={data.open_in_new_tab}
+                  onToggle={toggle}
+                  onOpen={onOpen}
+                  onButton={onCardButton}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
 
       {!pagerOnTop ? pager : null}
     </div>

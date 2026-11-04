@@ -43,6 +43,7 @@ const GalleryRoot: FrontendRenderer<GalleryStateShape, GalleryDataShape> = (
       holder.setStateValue("action_nonce", payload.action_nonce);
       holder.setStateValue("layout_columns", payload.layout_columns);
       holder.setStateValue("layout_rows", payload.layout_rows);
+      holder.setStateValue("page_index", payload.page_index);
     });
     bridges.set(parentElement, holder);
     bridge = holder;

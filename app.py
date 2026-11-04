@@ -355,6 +355,7 @@ st.write(
 try:
     import pandas as pd
     from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
+    from streamlit_image_board import finalize_aggrid_selection
 
     df = pd.DataFrame(table_rows)
     gb = GridOptionsBuilder.from_dataframe(df)
@@ -366,9 +367,9 @@ try:
     )
     grid = AgGrid(
         df,
-        gridOptions=gb.build(),
+        gridOptions=finalize_aggrid_selection(gb.build()),
         update_mode=GridUpdateMode.SELECTION_CHANGED,
-        fit_columns_on_grid_load=True,
+        fit_columns_on_grid_load=False,
         key="demo_aggrid",
         height=260,
     )

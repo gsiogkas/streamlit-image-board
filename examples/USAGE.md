@@ -100,6 +100,35 @@ result = st_image_board(
 )
 ```
 
+## Host-controlled paging + chrome-only
+
+```python
+from streamlit_image_board import merge_page_selection, st_image_board
+
+checklist = st.session_state.setdefault("sel", [])
+page_ids = [i["id"] for i in page_items]
+
+result = st_image_board(
+    page_items if show_grid else [{"id": i, "size_bytes": sizes.get(i)} for i in checklist],
+    columns=4,
+    rows=2,
+    selected_ids=checklist,
+    total_count=total,
+    page_index=page,
+    show_items=show_grid,          # False → toolbar/pager only
+    show_layout_controls=True,
+    key=f"board_{view_nonce}",     # remount on view flip
+)
+if show_grid:
+    checklist = merge_page_selection(checklist, page_ids, result.selected_ids)
+    st.session_state["sel"] = checklist
+# result.page_index / layout_columns / layout_rows → re-slice next run
+```
+
+Pair chrome-only with a selectable `st.dataframe(..., on_select="rerun",
+selection_mode="multi-row")` (or AgGrid) and the same `merge_page_selection`
+helper so off-page ids survive.
+
 ## JSON config
 
 ```python

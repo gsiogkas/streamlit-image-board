@@ -196,6 +196,18 @@ export function normalizeGalleryProps(
     })(),
     show_layout_controls: Boolean(p.show_layout_controls),
     pager_position: p.pager_position === "bottom" ? "bottom" : "top",
+    total_count: (() => {
+      if (p.total_count == null) return -1;
+      const raw = Number(p.total_count);
+      if (!Number.isFinite(raw) || raw < 0) return -1;
+      return Math.floor(raw);
+    })(),
+    page_index: (() => {
+      const raw = Number(p.page_index);
+      if (!Number.isFinite(raw) || raw < 0) return 0;
+      return Math.floor(raw);
+    })(),
+    show_items: p.show_items !== false,
     thumbnail_fit: p.thumbnail_fit === "contain" ? "contain" : "cover",
     empty_message:
       typeof p.empty_message === "string" ? p.empty_message : "No images",
