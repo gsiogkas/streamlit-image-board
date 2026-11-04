@@ -116,6 +116,7 @@ function GalleryCard({
   selectable,
   showCheckboxes,
   showHoverText,
+  showCardInfo,
   thumbnailFit,
   cardStyle,
   imageClick,
@@ -129,6 +130,7 @@ function GalleryCard({
   selectable: boolean;
   showCheckboxes: boolean;
   showHoverText: boolean;
+  showCardInfo: boolean;
   thumbnailFit: "cover" | "contain";
   cardStyle: CSSProperties;
   imageClick: ImageClickMode;
@@ -189,6 +191,7 @@ function GalleryCard({
         "sig-card",
         selected ? "sig-card-selected" : "",
         item.disabled ? "sig-card-disabled" : "",
+        showCardInfo ? "" : "sig-card-image-only",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -236,41 +239,45 @@ function GalleryCard({
           </div>
         ) : null}
       </div>
-      <div className="sig-meta">
-        <div className="sig-label" title={item.label} style={item.label_style}>
-          {item.label}
-        </div>
-        {item.caption ? (
-          <div
-            className="sig-caption"
-            title={item.caption}
-            style={item.caption_style}
-          >
-            {item.caption}
+      {showCardInfo ? (
+        <>
+          <div className="sig-meta">
+            <div className="sig-label" title={item.label} style={item.label_style}>
+              {item.label}
+            </div>
+            {item.caption ? (
+              <div
+                className="sig-caption"
+                title={item.caption}
+                style={item.caption_style}
+              >
+                {item.caption}
+              </div>
+            ) : null}
           </div>
-        ) : null}
-      </div>
-      {item.texts.length > 0 ? (
-        <div className="sig-texts">
-          {item.texts.map((t) => (
-            <TextChip
-              key={t.id}
-              text={t}
-              onClick={(textId) => onButton(textId, item.id)}
-            />
-          ))}
-        </div>
-      ) : null}
-      {item.buttons.length > 0 ? (
-        <div className="sig-card-actions">
-          {item.buttons.map((b) => (
-            <ActionButton
-              key={b.id}
-              button={{ ...b, disabled: b.disabled || item.disabled }}
-              onClick={(buttonId) => onButton(buttonId, item.id)}
-            />
-          ))}
-        </div>
+          {item.texts.length > 0 ? (
+            <div className="sig-texts">
+              {item.texts.map((t) => (
+                <TextChip
+                  key={t.id}
+                  text={t}
+                  onClick={(textId) => onButton(textId, item.id)}
+                />
+              ))}
+            </div>
+          ) : null}
+          {item.buttons.length > 0 ? (
+            <div className="sig-card-actions">
+              {item.buttons.map((b) => (
+                <ActionButton
+                  key={b.id}
+                  button={{ ...b, disabled: b.disabled || item.disabled }}
+                  onClick={(buttonId) => onButton(buttonId, item.id)}
+                />
+              ))}
+            </div>
+          ) : null}
+        </>
       ) : null}
     </article>
   );
@@ -285,6 +292,40 @@ function orderSelected(ids: string[], itemIds: string[]): string[] {
   return ordered;
 }
 
+function formatBytes(numBytes: number): string {
+  if (!Number.isFinite(numBytes) || numBytes < 0) return "";
+  const units = ["B", "KB", "MB", "GB", "TB"] as const;
+  let value = numBytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  if (unit === 0) return `${Math.round(value)} B`;
+  return `${value.toFixed(1)} ${units[unit]}`;
+}
+
+function selectionStatsLabel(
+  selectedIds: string[],
+  items: GalleryItem[],
+  totalEnabled: number,
+): string {
+  const byId = new Map(items.map((item) => [item.id, item]));
+  let sized = 0;
+  let totalBytes = 0;
+  for (const id of selectedIds) {
+    const item = byId.get(id);
+    if (!item || item.size_bytes == null) continue;
+    sized += 1;
+    totalBytes += item.size_bytes;
+  }
+  const count = selectedIds.length;
+  let label = `${count} selected`;
+  if (totalEnabled) label = `${label} / ${totalEnabled}`;
+  if (sized > 0) label = `${label} · ${formatBytes(totalBytes)}`;
+  return label;
+}
+
 export default function ImageGallery({
   setStateValue,
   ...data
@@ -297,6 +338,23 @@ export default function ImageGallery({
   const awaitingHostEcho = useRef(false);
 
   const itemIds = useMemo(() => data.items.map((i) => i.id), [data.items]);
+  const itemIdsKey = useMemo(() => itemIds.join("\0"), [itemIds]);
+
+  const pageSize = data.page_size > 0 ? data.page_size : 0;
+  const pageCount = pageSize
+    ? Math.max(1, Math.ceil(data.items.length / pageSize))
+    : 1;
+  const [page, setPage] = useState(0);
+
+  useEffect(() => {
+    setPage((prev) => Math.min(Math.max(0, prev), pageCount - 1));
+  }, [pageCount, itemIdsKey]);
+
+  const pageItems = useMemo(() => {
+    if (!pageSize) return data.items;
+    const start = page * pageSize;
+    return data.items.slice(start, start + pageSize);
+  }, [data.items, page, pageSize]);
 
   useEffect(() => {
     if (hostSelectedKey === lastPushedSelection.current) {
@@ -394,9 +452,18 @@ export default function ImageGallery({
   const toggleSelectAll = useCallback(() => {
     // Partial or empty → select all. Fully selected → deselect all.
     // Never rely on the browser's native checkbox flip (indeterminate is flaky).
+    // Checklist is global across pages when paging is enabled.
     if (allSelected) clearAll();
     else selectAll();
   }, [allSelected, clearAll, selectAll]);
+
+  const goPrev = useCallback(() => {
+    setPage((p) => Math.max(0, p - 1));
+  }, []);
+
+  const goNext = useCallback(() => {
+    setPage((p) => Math.min(pageCount - 1, p + 1));
+  }, [pageCount]);
 
   const rootStyle: CSSProperties = {
     ["--sig-selection" as string]: data.selection_color,
@@ -410,14 +477,30 @@ export default function ImageGallery({
     width: "100%",
   };
 
+  const paging = pageSize > 0 && data.items.length > 0;
+  const pageLabel =
+    data.items.length === 0
+      ? "Page 0 of 0"
+      : `Page ${page + 1} of ${pageCount}`;
+
   return (
     <div className="sig-root" style={rootStyle}>
       {(data.show_select_all || data.buttons.length > 0 || data.selectable) && (
         <div className="sig-toolbar">
           {data.selectable ? (
-            <span className="sig-count">
-              {enabledSelectedCount} selected
-              {enabledIds.length ? ` / ${enabledIds.length}` : ""}
+            <span
+              className="sig-count"
+              title={
+                data.show_selection_stats
+                  ? "Selected file count and total size (all pages)"
+                  : undefined
+              }
+            >
+              {data.show_selection_stats
+                ? selectionStatsLabel(selected, data.items, enabledIds.length)
+                : `${enabledSelectedCount} selected${
+                    enabledIds.length ? ` / ${enabledIds.length}` : ""
+                  }`}
             </span>
           ) : (
             <span className="sig-count">{data.items.length} images</span>
@@ -439,10 +522,10 @@ export default function ImageGallery({
                 aria-label={allSelected ? "Deselect all" : "Select all"}
                 title={
                   allSelected
-                    ? "Deselect all"
+                    ? "Deselect all pages"
                     : someSelected
-                      ? "Select remaining"
-                      : "Select all"
+                      ? "Select remaining (all pages)"
+                      : "Select all (all pages)"
                 }
                 onClick={toggleSelectAll}
               >
@@ -460,6 +543,7 @@ export default function ImageGallery({
                 className="sig-btn"
                 disabled={allSelected || enabledIds.length === 0}
                 onClick={selectAll}
+                title="Select every item across all pages"
               >
                 Select all
               </button>
@@ -468,6 +552,7 @@ export default function ImageGallery({
                 className="sig-btn"
                 disabled={noneSelected}
                 onClick={clearAll}
+                title="Clear selection on all pages"
               >
                 Deselect all
               </button>
@@ -480,12 +565,15 @@ export default function ImageGallery({
         </div>
       )}
 
-      <div className="sig-scroll" style={{ maxHeight: data.max_height }}>
+      <div
+        className={paging ? "sig-page" : "sig-scroll"}
+        style={paging ? undefined : { maxHeight: data.max_height }}
+      >
         {data.items.length === 0 ? (
           <div className="sig-empty">{data.empty_message}</div>
         ) : (
           <div className="sig-grid" style={gridStyle}>
-            {data.items.map((item) => (
+            {pageItems.map((item) => (
               <GalleryCard
                 key={item.id}
                 item={item}
@@ -493,6 +581,7 @@ export default function ImageGallery({
                 selectable={data.selectable}
                 showCheckboxes={data.show_checkboxes}
                 showHoverText={data.show_hover_text}
+                showCardInfo={data.show_card_info}
                 thumbnailFit={data.thumbnail_fit}
                 cardStyle={data.card_style}
                 imageClick={data.image_click}
@@ -505,6 +594,38 @@ export default function ImageGallery({
           </div>
         )}
       </div>
+
+      {paging ? (
+        <div className="sig-pager" role="navigation" aria-label="Board pages">
+          <button
+            type="button"
+            className="sig-btn"
+            disabled={page <= 0}
+            onClick={goPrev}
+            aria-label="Previous page"
+          >
+            Prev
+          </button>
+          <span className="sig-pager-label" aria-live="polite">
+            {pageLabel}
+            <span className="sig-pager-range">
+              {" "}
+              · {page * pageSize + 1}–
+              {Math.min(data.items.length, (page + 1) * pageSize)} of{" "}
+              {data.items.length}
+            </span>
+          </span>
+          <button
+            type="button"
+            className="sig-btn"
+            disabled={page >= pageCount - 1}
+            onClick={goNext}
+            aria-label="Next page"
+          >
+            Next
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -20,8 +20,11 @@ rerun for every toggle.
 - Stylable **label / caption / text chips / buttons**
 - Per-card (and board-default) **background, text color, font**
 - **JSON** items / full board config (file path, string, or dict)
+- Toolbar **selection counter**: file count + total size
+- Optional **paging** (`page_size`) — overflow goes to the next page; checklist spans all pages
+- **Image-only cards** via `show_card_info=False` (hide labels / captions / chips / card buttons)
 - Shared checklist contract for **AgGrid** (classic + v2)
-- Returns `selected_ids: list[str]` and `selected_csv`
+- Returns `selected_ids: list[str]`, `selected_csv`, and size stats
 
 ## Install
 
@@ -44,6 +47,10 @@ Demo:
 ```bash
 streamlit run app.py
 ```
+
+Bundled demo photos live in [`examples/images/`](examples/images/) (public domain;
+see [`ATTRIBUTION.md`](examples/images/ATTRIBUTION.md)). Refresh with
+`uv run python scripts/fetch_demo_images.py`.
 
 ## Quick start
 
@@ -91,6 +98,53 @@ result = st_image_board(
 
 ids = result.selected_ids   # ["a", "b"]
 csv = result.selected_csv   # "a,b"
+n = result.selected_count   # 2
+size = result.selected_size # e.g. "240.0 KB" when sizes are known
+```
+
+### Image-only cards
+
+Hide everything under the thumbnail (label, caption, chips, per-card buttons):
+
+```python
+result = st_image_board(items, show_card_info=False)
+```
+
+Checkboxes, hover overlay, selection frame, and toolbar actions still work.
+
+### Paging
+
+Set `page_size` to a positive integer to paginate instead of scrolling.
+Selection, select-all, and the size counter stay **global** across pages.
+
+```python
+result = st_image_board(items, columns=4, page_size=8)
+# page_size=0 (default) → classic scroll via max_height
+```
+
+### Selection size counter
+
+Pass `size` / `size_bytes` on items (int bytes, or strings like `"1.5 MB"`).
+Pillow images and `data:` URLs get a size inferred automatically.
+
+The toolbar shows e.g. `3 selected / 8 · 1.2 MB` (toggle with
+`show_selection_stats=False`). Python side:
+
+| Field | Meaning |
+| --- | --- |
+| `selected_count` | Number of selected files |
+| `selected_bytes` | Sum of known sizes (bytes) |
+| `selected_size` | Human string (`""` if none known) |
+| `result.stats_label(total_count=…)` | Same text as the toolbar |
+
+```python
+result = st_image_board(
+    [
+        {"id": "a", "src": "https://…/a.jpg", "size_bytes": 120_000},
+        {"id": "b", "src": "https://…/b.jpg", "size": "2.1 MB"},
+    ],
+)
+st.write(result.selected_count, result.selected_size)
 ```
 
 ### Image click behavior
@@ -167,11 +221,15 @@ Allowed style keys are sanitized (color, background, fontFamily, padding, …).
 | --- | --- |
 | `selected_ids` | `list[str]` — checkbox **and** image clicks |
 | `selected_csv` | Same ids as `"id1,id2"` |
+| `selected_count` | Number of selected files |
+| `selected_bytes` | Sum of known `size_bytes` |
+| `selected_size` | Human-readable total (or `""`) |
 | `clicked_button` | Last toolbar/card button id |
 | `clicked_item` | Item id for card button / activation |
 | `action_nonce` | Increments on each action so repeats are detectable |
 
-Helpers: `result.as_list()`, `result.as_set()`, `result.to_aggrid_preselected(df)`.
+Helpers: `result.as_list()`, `result.as_set()`, `result.stats_label()`,
+`result.to_aggrid_preselected(df)`, `format_bytes`.
 
 `st_image_gallery` / `GalleryResult` remain as thin aliases.
 

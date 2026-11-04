@@ -39,6 +39,8 @@ export type GalleryItem = {
   image_click: ImageClickMode | null;
   /** URL to open when image_click is "open" (falls back to src). */
   open_url: string;
+  /** Optional file size in bytes (for selection size counter). */
+  size_bytes: number | null;
   disabled: boolean;
   buttons: GalleryButton[];
   texts: GalleryText[];
@@ -57,6 +59,13 @@ export type GalleryDataShape = {
   open_in_new_tab: boolean;
   /** Show hover text overlay on images. */
   show_hover_text: boolean;
+  /**
+   * Show label / caption / text chips / per-card buttons under each thumbnail.
+   * When false, cards are image-only (checkboxes + hover still apply).
+   */
+  show_card_info: boolean;
+  /** Show selected file count + size total in the toolbar. */
+  show_selection_stats: boolean;
   /** CSS color for the selected image frame. */
   selection_color: string;
   /** Default card chrome applied under each item's card_style. */
@@ -66,6 +75,11 @@ export type GalleryDataShape = {
   show_select_all: boolean;
   buttons: GalleryButton[];
   max_height: number;
+  /**
+   * Items per page. `0` disables paging (scroll overflow instead).
+   * Selection checklist spans all pages.
+   */
+  page_size: number;
   thumbnail_fit: "cover" | "contain";
   empty_message: string;
 };

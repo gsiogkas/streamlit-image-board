@@ -25,6 +25,13 @@ from streamlit_image_board.selection import (
     selected_ids_to_csv,
     sync_checklist,
 )
+from streamlit_image_board.sizes import (
+    format_bytes,
+    parse_size_bytes,
+    selected_size_bytes,
+    selection_stats_label,
+    size_from_data_url,
+)
 
 _UNSET = object()
 
@@ -54,6 +61,12 @@ class BoardResult:
         ``list[str]`` of item ids, ordered like the board items.
     selected_csv:
         Same selection as a comma-separated string (easy to split / log).
+    selected_count:
+        ``len(selected_ids)``.
+    selected_bytes:
+        Sum of ``size_bytes`` for selected items that declare a size.
+    selected_size:
+        Human-readable ``selected_bytes`` (empty when no sizes known).
     clicked_button:
         Id of the last toolbar / per-item button pressed, or None.
     clicked_item:
@@ -64,6 +77,9 @@ class BoardResult:
 
     selected_ids: list[str] = field(default_factory=list)
     selected_csv: str = ""
+    selected_count: int = 0
+    selected_bytes: int = 0
+    selected_size: str = ""
     clicked_button: str | None = None
     clicked_item: str | None = None
     action_nonce: int = 0
@@ -75,6 +91,15 @@ class BoardResult:
     def as_set(self) -> set[str]:
         """Return selected ids as a set of strings."""
         return set(self.selected_ids)
+
+    def stats_label(self, *, total_count: int = 0) -> str:
+        """Toolbar-style summary, e.g. ``3 selected / 8 · 1.2 MB``."""
+        return selection_stats_label(
+            selected_count=self.selected_count,
+            total_count=total_count,
+            selected_bytes=self.selected_bytes,
+            sized_count=1 if self.selected_size else 0,
+        )
 
     def to_aggrid_preselected(
         self,
@@ -188,7 +213,7 @@ def _sanitize_style(raw: Any) -> dict[str, Any]:
     return out
 
 
-def _image_to_data_url(img: Image.Image, *, max_edge: int = 720) -> str:
+def _image_to_data_url(img: Image.Image, *, max_edge: int = 720) -> tuple[str, int]:
     work = img.convert("RGB")
     w, h = work.size
     edge = max(w, h)
@@ -200,16 +225,46 @@ def _image_to_data_url(img: Image.Image, *, max_edge: int = 720) -> str:
         )
     buf = io.BytesIO()
     work.save(buf, format="JPEG", quality=85, optimize=True)
-    b64 = base64.b64encode(buf.getvalue()).decode("ascii")
-    return f"data:image/jpeg;base64,{b64}"
+    payload = buf.getvalue()
+    b64 = base64.b64encode(payload).decode("ascii")
+    return f"data:image/jpeg;base64,{b64}", len(payload)
+
+
+def _coerce_item_size(raw: dict[str, Any], src: str, encoded_bytes: int | None) -> int | None:
+    explicit = parse_size_bytes(
+        raw.get(
+            "size_bytes",
+            raw.get("sizeBytes", raw.get("size", raw.get("bytes", raw.get("filesize")))),
+        )
+    )
+    if explicit is not None:
+        return explicit
+    if encoded_bytes is not None:
+        return encoded_bytes
+    return size_from_data_url(src)
+
+
+_LOCAL_IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tif", ".tiff"}
+
+
+def _resolve_local_image(src: str) -> tuple[str, int] | None:
+    """If ``src`` is a readable local image path, return ``(data_url, nbytes)``."""
+    if not src or src.startswith(("http://", "https://", "data:")):
+        return None
+    path = Path(src).expanduser()
+    if not path.is_file() or path.suffix.lower() not in _LOCAL_IMAGE_SUFFIXES:
+        return None
+    with Image.open(path) as img:
+        return _image_to_data_url(img)
 
 
 def _normalize_item(raw: BoardItemInput, index: int) -> dict[str, Any]:
     if isinstance(raw, Image.Image):
         label = f"Image {index + 1}"
+        src, nbytes = _image_to_data_url(raw)
         return {
             "id": str(index),
-            "src": _image_to_data_url(raw),
+            "src": src,
             "label": label,
             "label_style": {},
             "caption": "",
@@ -218,6 +273,7 @@ def _normalize_item(raw: BoardItemInput, index: int) -> dict[str, Any]:
             "card_style": {},
             "image_click": None,
             "open_url": "",
+            "size_bytes": nbytes,
             "disabled": False,
             "buttons": [],
             "texts": [],
@@ -225,9 +281,14 @@ def _normalize_item(raw: BoardItemInput, index: int) -> dict[str, Any]:
 
     if isinstance(raw, str):
         label = f"Image {index + 1}"
+        local = _resolve_local_image(raw)
+        if local is not None:
+            src, nbytes = local
+        else:
+            src, nbytes = raw, size_from_data_url(raw)
         return {
             "id": str(index),
-            "src": raw,
+            "src": src,
             "label": label,
             "label_style": {},
             "caption": "",
@@ -236,6 +297,7 @@ def _normalize_item(raw: BoardItemInput, index: int) -> dict[str, Any]:
             "card_style": {},
             "image_click": None,
             "open_url": "",
+            "size_bytes": nbytes,
             "disabled": False,
             "buttons": [],
             "texts": [],
@@ -246,8 +308,15 @@ def _normalize_item(raw: BoardItemInput, index: int) -> dict[str, Any]:
 
     item_id = str(raw.get("id", index))
     src = raw.get("src") or raw.get("url") or raw.get("image")
+    encoded_bytes: int | None = None
     if isinstance(src, Image.Image):
-        src = _image_to_data_url(src)
+        src, encoded_bytes = _image_to_data_url(src)
+    elif isinstance(src, Path):
+        src = str(src)
+    if isinstance(src, str):
+        local = _resolve_local_image(src)
+        if local is not None:
+            src, encoded_bytes = local
     if not isinstance(src, str) or not src:
         raise ValueError(f"Gallery item {item_id!r} needs a src/url/image")
 
@@ -291,6 +360,7 @@ def _normalize_item(raw: BoardItemInput, index: int) -> dict[str, Any]:
         "card_style": card_style,
         "image_click": image_click,
         "open_url": open_url_s,
+        "size_bytes": _coerce_item_size(raw, src, encoded_bytes),
         "disabled": bool(raw.get("disabled", False)),
         "buttons": _normalize_buttons(buttons),
         "texts": _normalize_texts(texts),
@@ -397,6 +467,8 @@ def st_image_board(
     image_click: Any = _UNSET,
     open_in_new_tab: Any = _UNSET,
     show_hover_text: Any = _UNSET,
+    show_card_info: Any = _UNSET,
+    show_selection_stats: Any = _UNSET,
     selection_color: Any = _UNSET,
     card_style: Any = _UNSET,
     selected_ids: Any = _UNSET,
@@ -407,6 +479,7 @@ def st_image_board(
     card_texts: Any = _UNSET,
     height: Any = _UNSET,
     max_height: Any = _UNSET,
+    page_size: Any = _UNSET,
     thumbnail_fit: Any = _UNSET,
     empty_message: Any = _UNSET,
     key: str | None = None,
@@ -425,8 +498,8 @@ def st_image_board(
         string, or a path to a ``.json`` file. Dict keys include ``id``,
         ``src`` / ``url`` / ``image``, ``label``, ``caption``, ``hover_text``,
         ``card_style`` / ``background`` / ``color`` / ``font_family``,
-        ``image_click``, ``open_url`` / ``href``, ``disabled``, ``buttons``,
-        ``texts``.
+        ``image_click``, ``open_url`` / ``href``, ``size`` / ``size_bytes``,
+        ``disabled``, ``buttons``, ``texts``.
     config:
         Optional full board JSON/dict (``items`` + options). Values in
         ``config`` fill defaults; explicit kwargs override them.
@@ -447,6 +520,14 @@ def st_image_board(
         When ``image_click="open"``, open ``open_url`` (or ``src``) in a new tab.
     show_hover_text:
         Show overlay text on image hover (``hover_text``, else ``label``).
+    show_card_info:
+        Show label, caption, text chips, and per-card buttons under each
+        thumbnail. Set ``False`` for image-only cards (checkboxes / hover /
+        selection frame still work).
+    show_selection_stats:
+        Toolbar counter for selected file count and total size (when items
+        declare ``size`` / ``size_bytes``, or sizes are inferred from
+        Pillow / data-URL payloads).
     selection_color:
         CSS color for the selected image frame. Defaults to ``"#0f766e"``.
     card_style:
@@ -472,7 +553,13 @@ def st_image_board(
         Fixed component height in pixels. ``None`` sizes to content up to
         ``max_height``.
     max_height:
-        Max scrollable height when ``height`` is None. Defaults to ``640``.
+        Max scrollable height when ``height`` is None and paging is off.
+        Defaults to ``640``. Ignored for layout when ``page_size`` > 0
+        (overflow goes to the next page instead of scrolling).
+    page_size:
+        Items per page. ``0`` / ``None`` disables paging (scroll mode).
+        When set, the board shows Prev/Next; selection (``selected_ids``,
+        select-all, size counter) covers **all** pages.
     thumbnail_fit:
         CSS ``object-fit`` for thumbnails: ``cover`` (default) or ``contain``.
     empty_message:
@@ -483,8 +570,9 @@ def st_image_board(
     Returns
     -------
     BoardResult
-        ``selected_ids`` / ``selected_csv`` plus the latest button / item click.
-        Opening an image sets ``clicked_button="open"`` and ``clicked_item``.
+        ``selected_ids`` / ``selected_csv`` / size counter fields, plus the
+        latest button / item click. Opening an image sets
+        ``clicked_button="open"`` and ``clicked_item``.
     """
     cfg: dict[str, Any] = load_board_config(config) if config is not None else {}
 
@@ -512,6 +600,8 @@ def st_image_board(
     image_click = str(pick("image_click", "select", image_click))
     open_in_new_tab = bool(pick("open_in_new_tab", True, open_in_new_tab))
     show_hover_text = bool(pick("show_hover_text", True, show_hover_text))
+    show_card_info = bool(pick("show_card_info", True, show_card_info))
+    show_selection_stats = bool(pick("show_selection_stats", True, show_selection_stats))
     selection_color = str(pick("selection_color", "#0f766e", selection_color))
     card_style = pick("card_style", None, card_style)
     selected_ids = pick("selected_ids", None, selected_ids)
@@ -522,6 +612,12 @@ def st_image_board(
     card_texts = pick("card_texts", None, card_texts)
     height = pick("height", None, height)
     max_height = int(pick("max_height", 640, max_height))
+    page_size_raw = pick("page_size", 0, page_size)
+    try:
+        page_size_n = int(page_size_raw or 0)
+    except (TypeError, ValueError):
+        page_size_n = 0
+    page_size_n = max(0, min(page_size_n, 200))
     thumbnail_fit = str(pick("thumbnail_fit", "cover", thumbnail_fit))
     empty_message = str(pick("empty_message", "No images", empty_message))
 
@@ -549,6 +645,8 @@ def st_image_board(
         "image_click": click_mode,
         "open_in_new_tab": bool(open_in_new_tab),
         "show_hover_text": bool(show_hover_text),
+        "show_card_info": bool(show_card_info),
+        "show_selection_stats": bool(show_selection_stats),
         "selection_color": str(selection_color or "#0f766e"),
         "card_style": _sanitize_style(card_style),
         "selected_ids": initial_selected,
@@ -556,6 +654,7 @@ def st_image_board(
         "show_select_all": bool(show_select_all and multi_select and selectable),
         "buttons": _normalize_buttons(buttons),
         "max_height": int(max_height if height is None else height),
+        "page_size": page_size_n,
         "thumbnail_fit": "contain" if thumbnail_fit == "contain" else "cover",
         "empty_message": str(empty_message),
     }
@@ -583,10 +682,14 @@ def st_image_board(
         getattr(raw, "selected_csv", None),
         item_order=[item["id"] for item in normalized],
     )
+    count, total_bytes, sized = selected_size_bytes(normalized, ids)
 
     return BoardResult(
         selected_ids=ids,
         selected_csv=csv,
+        selected_count=count,
+        selected_bytes=total_bytes,
+        selected_size=format_bytes(total_bytes) if sized else "",
         clicked_button=getattr(raw, "clicked_button", None),
         clicked_item=getattr(raw, "clicked_item", None),
         action_nonce=int(getattr(raw, "action_nonce", 0) or 0),
@@ -604,13 +707,17 @@ __all__ = [
     "aggrid_preselected_rows",
     "configure_aggrid_selection",
     "filter_rows_by_ids",
+    "format_bytes",
     "load_board_config",
     "load_board_items",
     "merge_selection_sources",
     "normalize_selected_ids",
+    "parse_size_bytes",
     "selected_ids_from_aggrid",
     "selected_ids_from_csv",
     "selected_ids_to_csv",
+    "selected_size_bytes",
+    "selection_stats_label",
     "st_image_board",
     "st_image_gallery",
     "sync_checklist",

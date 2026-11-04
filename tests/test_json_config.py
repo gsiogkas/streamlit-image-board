@@ -27,7 +27,8 @@ def test_load_items_from_json_array_string() -> None:
 def test_load_items_from_examples_file() -> None:
     items = load_board_items(EXAMPLES / "items.json")
     assert len(items) == 2
-    assert items[0]["id"] == "a"
+    assert items[0]["id"] == "tiger"
+    assert items[0]["src"].endswith("tiger.jpg")
 
 
 def test_load_config_from_examples_file() -> None:

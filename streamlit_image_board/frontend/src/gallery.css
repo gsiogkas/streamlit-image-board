@@ -52,6 +52,8 @@
   color: var(--sig-muted);
   font-variant-numeric: tabular-nums;
   margin-right: auto;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .sig-select-all {
@@ -199,6 +201,35 @@
   scrollbar-gutter: stable;
 }
 
+.sig-page {
+  flex: 1 1 auto;
+  overflow: visible;
+  min-height: 0;
+}
+
+.sig-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  padding-top: 2px;
+}
+
+.sig-pager-label {
+  color: var(--sig-muted);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  min-width: 10ch;
+  text-align: center;
+}
+
+.sig-pager-range {
+  font-weight: 500;
+  opacity: 0.9;
+}
+
 .sig-grid {
   display: grid !important;
   width: 100%;
@@ -244,6 +275,10 @@
 .sig-card-selected {
   border-color: var(--sig-selection);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--sig-selection) 22%, transparent);
+}
+
+.sig-card-image-only .sig-thumb-wrap {
+  border-radius: inherit;
 }
 
 .sig-card-disabled {

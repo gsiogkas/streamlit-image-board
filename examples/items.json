@@ -1,18 +1,19 @@
 [
   {
-    "id": "a",
-    "src": "https://picsum.photos/seed/sib-a/320/320",
-    "label": "Alpha",
-    "hover_text": "Alpha — select mode",
+    "id": "tiger",
+    "src": "examples/images/tiger.jpg",
+    "label": "Bengal tiger",
+    "hover_text": "Public-domain USFWS photo",
     "caption": "from JSON array",
-    "open_url": "https://github.com/gsiogkas/streamlit-image-board"
+    "open_url": "https://commons.wikimedia.org/wiki/File:Bengal_tiger.jpg"
   },
   {
-    "id": "b",
-    "src": "https://picsum.photos/seed/sib-b/320/320",
-    "label": "Beta",
+    "id": "bee",
+    "src": "examples/images/bee.jpg",
+    "label": "Honeybee",
     "caption": "also JSON",
     "background": "#f0f9ff",
-    "color": "#075985"
+    "color": "#075985",
+    "open_url": "https://commons.wikimedia.org/wiki/File:Honeybee_(1).jpg"
   }
 ]

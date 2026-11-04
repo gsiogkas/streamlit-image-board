@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import streamlit as st
-from PIL import Image, ImageDraw
+from PIL import Image
 from streamlit_image_board import (
     aggrid_preselected_rows,
     selected_ids_from_aggrid,
@@ -13,30 +13,32 @@ from streamlit_image_board import (
     sync_checklist,
 )
 
-_EXAMPLES = Path(__file__).resolve().parent / "examples"
+_ROOT = Path(__file__).resolve().parent
+_EXAMPLES = _ROOT / "examples"
+_DEMO_IMAGES = _EXAMPLES / "images"
 
 st.set_page_config(page_title="Image Board Demo", page_icon=":framed_picture:")
 st.title("Streamlit Image Board")
-st.caption("React Components v2 — selectable board with hover text and actions.")
+st.caption(
+    "React Components v2 — selectable board with hover text and actions. "
+    "Demo photos are public-domain (see `examples/images/ATTRIBUTION.md`)."
+)
 
 
-def make_swatch(color: str, label: str, size: int = 320) -> Image.Image:
-    img = Image.new("RGB", (size, size), color)
-    draw = ImageDraw.Draw(img)
-    draw.rectangle((16, 16, size - 17, size - 17), outline="white", width=4)
-    draw.text((28, size - 56), label, fill="white")
-    return img
+def load_demo(name: str) -> Image.Image:
+    """Load a bundled public-domain JPEG from ``examples/images/``."""
+    return Image.open(_DEMO_IMAGES / name).convert("RGB")
 
 
 SAMPLES = [
     {
-        "id": "teal",
-        "image": make_swatch("#0f766e", "Teal"),
-        "label": "Teal",
-        "hover_text": "Teal — click image or checkbox to select",
+        "id": "tiger",
+        "image": load_demo("tiger.jpg"),
+        "label": "Bengal tiger",
+        "hover_text": "USFWS — click image or checkbox to select",
         "label_style": {"fontWeight": "700"},
-        "caption": "Primary",
-        "open_url": "https://github.com/gsiogkas/streamlit-image-board",
+        "caption": "Wildlife",
+        "open_url": "https://commons.wikimedia.org/wiki/File:Bengal_tiger.jpg",
         "card_style": {
             "background": "#ecfdf5",
             "color": "#065f46",
@@ -44,70 +46,77 @@ SAMPLES = [
         },
         "texts": [
             {"id": "tag", "text": "NEW", "variant": "badge"},
-            {"id": "size", "text": "320×320", "variant": "muted"},
+            {"id": "src", "text": "USFWS", "variant": "muted"},
         ],
     },
     {
-        "id": "slate",
-        "image": make_swatch("#334155", "Slate"),
-        "label": "Slate",
-        "hover_text": "Slate archive plate",
-        "caption": "Neutral",
+        "id": "earth",
+        "image": load_demo("earth.jpg"),
+        "label": "Blue Marble",
+        "hover_text": "Earth from Apollo 17 (NASA)",
+        "caption": "Space",
         "background": "#0f172a",
         "color": "#e2e8f0",
         "font_family": "ui-monospace, SFMono-Regular, Menlo, monospace",
-        "texts": [{"text": "archive", "style": {"fontStyle": "italic", "opacity": "0.85"}}],
+        "open_url": "https://commons.wikimedia.org/wiki/File:The_Earth_seen_from_Apollo_17.jpg",
+        "texts": [{"text": "NASA", "style": {"fontStyle": "italic", "opacity": "0.85"}}],
     },
     {
-        "id": "amber",
-        "image": make_swatch("#b45309", "Amber"),
-        "label": "Amber",
+        "id": "bee",
+        "image": load_demo("bee.jpg"),
+        "label": "Honeybee",
         "hover_text": "Needs review",
-        "caption": "Warm",
+        "caption": "Macro",
         "card_style": {"background": "#fff7ed", "color": "#9a3412"},
+        "open_url": "https://commons.wikimedia.org/wiki/File:Honeybee_(1).jpg",
         "texts": [{"id": "warn", "text": "review", "variant": "danger", "clickable": True}],
     },
     {
-        "id": "rose",
-        "image": make_swatch("#be123c", "Rose"),
-        "label": "Rose",
-        "hover_text": "Rose accent",
-        "caption": "Accent",
+        "id": "bison",
+        "image": load_demo("bison.jpg"),
+        "label": "Bison",
+        "hover_text": "Badlands National Park (NPS)",
+        "caption": "Plains",
         "card_style": {"background": "#fff1f2", "color": "#9f1239"},
+        "open_url": "https://commons.wikimedia.org/wiki/File:Bison_Badlands_South_Dakota.jpg",
     },
     {
-        "id": "indigo",
-        "image": make_swatch("#3730a3", "Indigo"),
-        "label": "Indigo",
-        "hover_text": "Indigo cool tone",
-        "caption": "Cool",
+        "id": "penguins",
+        "image": load_demo("penguins.jpg"),
+        "label": "Emperor penguins",
+        "hover_text": "NSF / U.S. Antarctic Program",
+        "caption": "Antarctic",
         "card_style": {"background": "#eef2ff", "color": "#312e81"},
+        "open_url": "https://commons.wikimedia.org/wiki/File:Emperor_penguins.jpg",
     },
     {
-        "id": "lime",
-        "image": make_swatch("#4d7c0f", "Lime"),
-        "label": "Lime",
-        "hover_text": "Lime fresh",
-        "caption": "Fresh",
+        "id": "saturn",
+        "image": load_demo("saturn.jpg"),
+        "label": "Saturn",
+        "hover_text": "Saturn during equinox (NASA/JPL)",
+        "caption": "Planets",
         "card_style": {"background": "#f7fee7", "color": "#3f6212"},
+        "open_url": "https://commons.wikimedia.org/wiki/File:Saturn_during_Equinox.jpg",
     },
     {
         "id": "locked",
-        "image": make_swatch("#78716c", "Locked"),
-        "label": "Locked",
+        "image": load_demo("bear.jpg"),
+        "label": "Black bear",
         "hover_text": "Locked — not selectable",
         "caption": "disabled",
         "disabled": True,
         "card_style": {"background": "#f5f5f4", "color": "#57534e"},
+        "open_url": "https://commons.wikimedia.org/wiki/File:Black_bear_in_cave.jpg",
         "texts": [{"text": "locked", "variant": "badge", "style": {"background": "#78716c"}}],
     },
     {
-        "id": "sky",
-        "image": make_swatch("#0369a1", "Sky"),
-        "label": "Sky",
-        "hover_text": "Sky blue",
-        "caption": "Blue",
+        "id": "eagle",
+        "image": load_demo("eagle.jpg"),
+        "label": "Bald eagle",
+        "hover_text": "Haliaeetus leucocephalus",
+        "caption": "Raptors",
         "card_style": {"background": "#f0f9ff", "color": "#075985"},
+        "open_url": "https://commons.wikimedia.org/wiki/File:Haliaeetus_leucocephalus2.jpg",
     },
 ]
 
@@ -121,8 +130,21 @@ image_click = st.sidebar.selectbox(
 )
 open_new_tab = st.sidebar.checkbox("Open in new tab", True)
 show_hover = st.sidebar.checkbox("Hover text", True)
+show_card_info = st.sidebar.checkbox(
+    "Card info / buttons",
+    True,
+    help="Show label, caption, chips, and Open under each image.",
+)
 show_select_all = st.sidebar.checkbox("Select / deselect all", True)
 multi = st.sidebar.checkbox("Multi-select", True)
+page_size = st.sidebar.number_input(
+    "Page size",
+    min_value=0,
+    max_value=48,
+    value=4,
+    step=1,
+    help="0 = scroll all images. >0 = paginate; selection spans all pages.",
+)
 fit = st.sidebar.selectbox("Thumbnail fit", ["cover", "contain"])
 selection_color = st.sidebar.color_picker("Selection frame", "#0f766e")
 use_default_chrome = st.sidebar.checkbox("Apply default card chrome", False)
@@ -167,7 +189,14 @@ result = st_image_board(
     image_click=image_click,
     open_in_new_tab=open_new_tab,
     show_hover_text=show_hover,
+    show_card_info=show_card_info,
     show_select_all=show_select_all,
+    card_buttons=(
+        [{"id": "open", "label": "Open", "variant": "default"}] if show_card_info else None
+    ),
+    card_texts=(
+        [{"id": "hint", "text": "tap image", "variant": "muted"}] if show_card_info else None
+    ),
     selection_color=selection_color,
     card_style=(
         {
@@ -180,14 +209,13 @@ result = st_image_board(
     ),
     selected_ids=st.session_state.shared_selection,
     multi_select=multi,
+    page_size=int(page_size),
     thumbnail_fit=fit,
     max_height=520,
     buttons=[
         {"id": "approve", "label": "Approve selected", "variant": "primary"},
         {"id": "delete", "label": "Delete selected", "variant": "danger"},
     ],
-    card_buttons=[{"id": "open", "label": "Open", "variant": "default"}],
-    card_texts=[{"id": "hint", "text": "tap image", "variant": "muted"}],
     key="demo_board",
 )
 
@@ -215,7 +243,7 @@ if result.action_nonce and result.action_nonce != st.session_state.last_nonce:
     elif result.clicked_item:
         st.session_state.log.append(f"Activated {result.clicked_item}")
 
-c1, c2, c3 = st.columns(3)
+c1, c2, c3, c4 = st.columns(4)
 with c1:
     st.subheader("selected_ids")
     st.code(repr(result.selected_ids))
@@ -223,6 +251,14 @@ with c2:
     st.subheader("selected_csv")
     st.code(result.selected_csv or "(empty)")
 with c3:
+    st.subheader("Selection size")
+    st.code(result.stats_label(total_count=len(visible_ids)) or f"{result.selected_count} selected")
+    st.caption(
+        f"{result.selected_count} files · "
+        f"{result.selected_bytes} bytes"
+        + (f" ({result.selected_size})" if result.selected_size else "")
+    )
+with c4:
     st.subheader("Last action")
     st.write(
         {

@@ -11,6 +11,7 @@
   "selection_color": "#0f766e",
   "thumbnail_fit": "cover",
   "max_height": 480,
+  "page_size": 2,
   "empty_message": "No images",
   "card_style": {
     "background": "#ffffff",
@@ -25,30 +26,30 @@
   ],
   "items": [
     {
-      "id": "docs",
-      "src": "https://picsum.photos/seed/sib-docs/320/320",
-      "label": "Docs",
-      "hover_text": "Opens the project README",
-      "caption": "GitHub",
-      "open_url": "https://github.com/gsiogkas/streamlit-image-board#readme",
+      "id": "earth",
+      "src": "examples/images/earth.jpg",
+      "label": "Blue Marble",
+      "hover_text": "Opens the Commons file page",
+      "caption": "NASA",
+      "open_url": "https://commons.wikimedia.org/wiki/File:The_Earth_seen_from_Apollo_17.jpg",
       "card_style": {
         "background": "#ecfdf5",
         "color": "#065f46"
       }
     },
     {
-      "id": "pypi",
-      "src": "https://picsum.photos/seed/sib-pypi/320/320",
-      "label": "PyPI",
-      "hover_text": "Package page",
-      "caption": "Install",
-      "open_url": "https://pypi.org/project/streamlit-image-board/",
+      "id": "saturn",
+      "src": "examples/images/saturn.jpg",
+      "label": "Saturn",
+      "hover_text": "NASA / JPL",
+      "caption": "Planets",
+      "open_url": "https://commons.wikimedia.org/wiki/File:Saturn_during_Equinox.jpg",
       "image_click": "open"
     },
     {
-      "id": "select-me",
-      "src": "https://picsum.photos/seed/sib-select/320/320",
-      "label": "Select me",
+      "id": "penguins",
+      "src": "examples/images/penguins.jpg",
+      "label": "Penguins",
       "hover_text": "This card overrides board click → select",
       "caption": "override",
       "image_click": "select",

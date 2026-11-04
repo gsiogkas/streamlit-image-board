@@ -92,6 +92,15 @@ function asItem(raw: unknown): GalleryItem | null {
     ...sanitizeStyle(cardStyleRaw),
   };
   const openRaw = item.open_url ?? item.openUrl ?? item.href ?? item.link;
+  const sizeRaw =
+    item.size_bytes ?? item.sizeBytes ?? item.size ?? item.bytes ?? item.filesize;
+  let size_bytes: number | null = null;
+  if (typeof sizeRaw === "number" && Number.isFinite(sizeRaw) && sizeRaw >= 0) {
+    size_bytes = Math.floor(sizeRaw);
+  } else if (typeof sizeRaw === "string" && sizeRaw.trim()) {
+    const n = Number(sizeRaw);
+    if (Number.isFinite(n) && n >= 0) size_bytes = Math.floor(n);
+  }
   return {
     id: item.id,
     src: item.src,
@@ -104,6 +113,7 @@ function asItem(raw: unknown): GalleryItem | null {
     card_style,
     image_click: asImageClick(item.image_click ?? item.imageClick),
     open_url: typeof openRaw === "string" ? openRaw : "",
+    size_bytes,
     disabled: Boolean(item.disabled),
     buttons,
     texts,
@@ -147,6 +157,8 @@ export function normalizeGalleryProps(
     image_click: imageClick,
     open_in_new_tab: p.open_in_new_tab !== false,
     show_hover_text: p.show_hover_text !== false,
+    show_card_info: p.show_card_info !== false,
+    show_selection_stats: p.show_selection_stats !== false,
     selection_color: selectionColor,
     card_style: sanitizeStyle(p.card_style),
     selected_ids,
@@ -154,6 +166,11 @@ export function normalizeGalleryProps(
     show_select_all: Boolean(p.show_select_all),
     buttons,
     max_height: Math.max(120, Number(p.max_height) || 640),
+    page_size: (() => {
+      const raw = Number(p.page_size);
+      if (!Number.isFinite(raw) || raw <= 0) return 0;
+      return Math.max(1, Math.min(Math.floor(raw), 200));
+    })(),
     thumbnail_fit: p.thumbnail_fit === "contain" ? "contain" : "cover",
     empty_message:
       typeof p.empty_message === "string" ? p.empty_message : "No images",
