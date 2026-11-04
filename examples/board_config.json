@@ -12,6 +12,7 @@
   "thumbnail_fit": "cover",
   "max_height": 480,
   "page_size": 2,
+  "pager_position": "top",
   "empty_message": "No images",
   "card_style": {
     "background": "#ffffff",

@@ -145,6 +145,11 @@ page_size = st.sidebar.number_input(
     step=1,
     help="0 = scroll all images. >0 = paginate; selection spans all pages.",
 )
+pager_position = st.sidebar.selectbox(
+    "Pager position",
+    ["top", "bottom"],
+    help="First / Prev / Next / Last placement when paging is on.",
+)
 fit = st.sidebar.selectbox("Thumbnail fit", ["cover", "contain"])
 selection_color = st.sidebar.color_picker("Selection frame", "#0f766e")
 use_default_chrome = st.sidebar.checkbox("Apply default card chrome", False)
@@ -158,6 +163,13 @@ default_font = st.sidebar.selectbox(
         "ui-monospace, SFMono-Regular, Menlo, monospace",
     ],
 )
+style_buttons = st.sidebar.checkbox("Custom button aesthetics", False)
+btn_radius = st.sidebar.selectbox("Button radius", ["8px", "4px", "999px", "0px"], index=0)
+btn_size = st.sidebar.selectbox("Toolbar button size", ["md", "sm", "lg"])
+btn_bg = st.sidebar.color_picker("Button background", "#ffffff")
+btn_fg = st.sidebar.color_picker("Button text", "#0f172a")
+btn_primary = st.sidebar.color_picker("Primary button", "#0f766e")
+btn_danger = st.sidebar.color_picker("Danger button", "#b91c1c")
 
 if "kept" not in st.session_state:
     st.session_state.kept = {item["id"] for item in SAMPLES if item["id"] != "locked"}
@@ -207,14 +219,40 @@ result = st_image_board(
         if use_default_chrome
         else None
     ),
+    button_style=(
+        {
+            "background": btn_bg,
+            "color": btn_fg,
+            "borderRadius": btn_radius,
+            "padding": "6px 12px",
+            "fontWeight": "650",
+            "primaryBackground": btn_primary,
+            "primaryColor": "#ffffff",
+            "dangerBackground": "#fee2e2",
+            "dangerColor": btn_danger,
+        }
+        if style_buttons
+        else None
+    ),
     selected_ids=st.session_state.shared_selection,
     multi_select=multi,
     page_size=int(page_size),
+    pager_position=pager_position,
     thumbnail_fit=fit,
     max_height=520,
     buttons=[
-        {"id": "approve", "label": "Approve selected", "variant": "primary"},
-        {"id": "delete", "label": "Delete selected", "variant": "danger"},
+        {
+            "id": "approve",
+            "label": "Approve selected",
+            "variant": "primary",
+            "size": btn_size,
+        },
+        {
+            "id": "delete",
+            "label": "Delete selected",
+            "variant": "danger",
+            "size": btn_size,
+        },
     ],
     key="demo_board",
 )

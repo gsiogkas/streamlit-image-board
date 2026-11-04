@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { selectedIdsKey } from "./props";
+import { buttonStyleToCssVars } from "./styleSanitize";
 import type {
   GalleryButton,
   GalleryDataShape,
@@ -41,10 +42,12 @@ function ActionButton({
   onClick: (id: string) => void;
   className?: string;
 }) {
+  const sizeClass = button.size !== "md" ? `sig-btn-${button.size}` : "";
   return (
     <button
       type="button"
-      className={`sig-btn sig-btn-${button.variant} ${className}`.trim()}
+      className={`sig-btn sig-btn-${button.variant} ${sizeClass} ${className}`.trim()}
+      style={button.style}
       disabled={button.disabled}
       onClick={(e) => {
         e.stopPropagation();
@@ -457,17 +460,21 @@ export default function ImageGallery({
     else selectAll();
   }, [allSelected, clearAll, selectAll]);
 
+  const goFirst = useCallback(() => setPage(0), []);
   const goPrev = useCallback(() => {
     setPage((p) => Math.max(0, p - 1));
   }, []);
-
   const goNext = useCallback(() => {
     setPage((p) => Math.min(pageCount - 1, p + 1));
+  }, [pageCount]);
+  const goLast = useCallback(() => {
+    setPage(Math.max(0, pageCount - 1));
   }, [pageCount]);
 
   const rootStyle: CSSProperties = {
     ["--sig-selection" as string]: data.selection_color,
     ["--sig-accent" as string]: data.selection_color,
+    ...buttonStyleToCssVars(data.button_style),
   };
 
   const gridStyle: CSSProperties = {
@@ -478,10 +485,65 @@ export default function ImageGallery({
   };
 
   const paging = pageSize > 0 && data.items.length > 0;
+  const pagerOnTop = data.pager_position !== "bottom";
   const pageLabel =
     data.items.length === 0
       ? "Page 0 of 0"
       : `Page ${page + 1} of ${pageCount}`;
+
+  const pager = paging ? (
+    <div className="sig-pager" role="navigation" aria-label="Board pages">
+      <button
+        type="button"
+        className="sig-btn"
+        disabled={page <= 0}
+        onClick={goFirst}
+        aria-label="First page"
+        title="First page"
+      >
+        First
+      </button>
+      <button
+        type="button"
+        className="sig-btn"
+        disabled={page <= 0}
+        onClick={goPrev}
+        aria-label="Previous page"
+        title="Previous page"
+      >
+        Prev
+      </button>
+      <span className="sig-pager-label" aria-live="polite">
+        {pageLabel}
+        <span className="sig-pager-range">
+          {" "}
+          · {page * pageSize + 1}–
+          {Math.min(data.items.length, (page + 1) * pageSize)} of{" "}
+          {data.items.length}
+        </span>
+      </span>
+      <button
+        type="button"
+        className="sig-btn"
+        disabled={page >= pageCount - 1}
+        onClick={goNext}
+        aria-label="Next page"
+        title="Next page"
+      >
+        Next
+      </button>
+      <button
+        type="button"
+        className="sig-btn"
+        disabled={page >= pageCount - 1}
+        onClick={goLast}
+        aria-label="Last page"
+        title="Last page"
+      >
+        Last
+      </button>
+    </div>
+  ) : null;
 
   return (
     <div className="sig-root" style={rootStyle}>
@@ -565,6 +627,8 @@ export default function ImageGallery({
         </div>
       )}
 
+      {pagerOnTop ? pager : null}
+
       <div
         className={paging ? "sig-page" : "sig-scroll"}
         style={paging ? undefined : { maxHeight: data.max_height }}
@@ -595,37 +659,7 @@ export default function ImageGallery({
         )}
       </div>
 
-      {paging ? (
-        <div className="sig-pager" role="navigation" aria-label="Board pages">
-          <button
-            type="button"
-            className="sig-btn"
-            disabled={page <= 0}
-            onClick={goPrev}
-            aria-label="Previous page"
-          >
-            Prev
-          </button>
-          <span className="sig-pager-label" aria-live="polite">
-            {pageLabel}
-            <span className="sig-pager-range">
-              {" "}
-              · {page * pageSize + 1}–
-              {Math.min(data.items.length, (page + 1) * pageSize)} of{" "}
-              {data.items.length}
-            </span>
-          </span>
-          <button
-            type="button"
-            className="sig-btn"
-            disabled={page >= pageCount - 1}
-            onClick={goNext}
-            aria-label="Next page"
-          >
-            Next
-          </button>
-        </div>
-      ) : null}
+      {!pagerOnTop ? pager : null}
     </div>
   );
 }

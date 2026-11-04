@@ -59,16 +59,29 @@ EOF
 
 1. On GitHub: **New repository** → name `streamlit-image-board` → **Public** →  
    **do not** add README / license / `.gitignore` (this tree already has them).
-2. Then:
+2. Auth: GitHub **rejects account passwords** for `git push`. Use a
+   **Personal Access Token (PAT)** or **SSH**.
+
+**HTTPS + PAT**
+
+1. GitHub → **Settings → Developer settings → Personal access tokens**  
+   - Fine-grained: this repo, **Contents: Read and write**  
+   - Or classic: scope **`repo`**
+2. Push (Username = GitHub username, Password = **the token**):
 
 ```bash
 git remote add origin https://github.com/YOUR_GITHUB_USER/streamlit-image-board.git
+# if origin already exists:
+# git remote set-url origin https://github.com/YOUR_GITHUB_USER/streamlit-image-board.git
 git push -u origin main
 ```
 
-SSH alternative:
+**SSH**
 
 ```bash
+ssh-keygen -t ed25519 -C "you@email" -f ~/.ssh/id_ed25519
+cat ~/.ssh/id_ed25519.pub   # add under GitHub → SSH and GPG keys
+ssh -T git@github.com
 git remote add origin git@github.com:YOUR_GITHUB_USER/streamlit-image-board.git
 git push -u origin main
 ```
@@ -93,31 +106,40 @@ Update placeholders after the final URLs exist:
 ### One-time setup
 
 1. Create an account at [pypi.org](https://pypi.org) (and ideally [test.pypi.org](https://test.pypi.org)).
-2. Create an **API token** (Account settings → API tokens).
+2. Create an **API token** (Account settings → API tokens → entire account or project).
 3. Prefer Trusted Publishing later; for a first publish, token is fine.
 
 ### Build and publish
 
 ```bash
-# from repo root, with frontend already built
+# from repo root — frontend build must be committed / present
+cd streamlit_image_board/frontend && npm run build && cd ../..
+
 uv build
-uv publish
-```
-
-`uv publish` will prompt for credentials, or set:
-
-```bash
+# upload (username is __token__, password is the PyPI API token including pypi- prefix)
 export UV_PUBLISH_TOKEN="pypi-...."
 uv publish
 ```
 
-Optional dry run on TestPyPI:
+Or interactive:
+
+```bash
+uv publish
+# Username: __token__
+# Password: pypi-YOUR_TOKEN
+```
+
+Optional dry run on TestPyPI first:
 
 ```bash
 uv publish --publish-url https://test.pypi.org/legacy/
 ```
 
 Verify: https://pypi.org/project/streamlit-image-board/
+
+```bash
+pip install streamlit-image-board
+```
 
 Bump `version` in both before each new upload (PyPI versions are immutable):
 
@@ -136,19 +158,21 @@ This repo is Cloud-ready:
 - [`requirements.txt`](requirements.txt) — installs Streamlit deps **and this package from `.`**
 - Built assets committed under `streamlit_image_board/frontend/build/`
 
-### Deploy
+### Deploy (after GitHub push)
 
 1. Open [share.streamlit.io](https://share.streamlit.io) / Community Cloud and sign in with GitHub.
 2. **New app** → select `YOUR_GITHUB_USER/streamlit-image-board`.
 3. Main file: `app.py`
 4. Branch: `main`
-5. Deploy.
+5. Deploy (first build installs from `requirements.txt`, including `.`).
 
 Suggested demo URL slug:
 
 `https://image-board-demo.streamlit.app`
 
 Put that URL into `gallery/streamlit-image-board.json` → `links.demo`.
+
+Re-deploy: push to `main` (auto) or Cloud dashboard → **Reboot**.
 
 ### After PyPI exists (optional)
 

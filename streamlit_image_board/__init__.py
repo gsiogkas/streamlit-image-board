@@ -186,6 +186,15 @@ _ALLOWED_STYLE_KEYS = frozenset(
         "display",
         "alignSelf",
         "align-self",
+        # Button theme extras (mapped to CSS variables in the frontend)
+        "primaryBackground",
+        "primary-background",
+        "primaryColor",
+        "primary-color",
+        "dangerBackground",
+        "danger-background",
+        "dangerColor",
+        "danger-color",
     }
 )
 
@@ -374,11 +383,19 @@ def _normalize_buttons(buttons: Sequence[Any] | None) -> list[dict]:
     for b in buttons:
         if not isinstance(b, dict) or "id" not in b:
             continue
+        variant = str(b.get("variant") or "default")
+        if variant not in {"default", "primary", "danger", "ghost"}:
+            variant = "default"
+        size = str(b.get("size") or "md")
+        if size not in {"sm", "md", "lg"}:
+            size = "md"
         out.append(
             {
                 "id": str(b["id"]),
                 "label": str(b.get("label") or b["id"]),
-                "variant": str(b.get("variant") or "default"),
+                "variant": variant,
+                "size": size,
+                "style": _sanitize_style(b.get("style")),
                 "disabled": bool(b.get("disabled", False)),
             }
         )
@@ -471,6 +488,7 @@ def st_image_board(
     show_selection_stats: Any = _UNSET,
     selection_color: Any = _UNSET,
     card_style: Any = _UNSET,
+    button_style: Any = _UNSET,
     selected_ids: Any = _UNSET,
     multi_select: Any = _UNSET,
     show_select_all: Any = _UNSET,
@@ -480,6 +498,7 @@ def st_image_board(
     height: Any = _UNSET,
     max_height: Any = _UNSET,
     page_size: Any = _UNSET,
+    pager_position: Any = _UNSET,
     thumbnail_fit: Any = _UNSET,
     empty_message: Any = _UNSET,
     key: str | None = None,
@@ -533,6 +552,14 @@ def st_image_board(
     card_style:
         Default card chrome (``background``, ``color``, ``fontFamily``, …)
         applied under each item's own ``card_style``.
+    button_style:
+        Board-wide button aesthetics (applies to toolbar, pager, and card
+        buttons). Keys: ``background``, ``color``, ``borderRadius``,
+        ``padding``, ``fontSize``, ``fontWeight``, ``borderColor``, plus
+        ``primaryBackground`` / ``primaryColor`` / ``dangerBackground`` /
+        ``dangerColor``. Per-button ``style`` / ``size`` / ``variant`` still
+        override locally (``variant``: ``default`` | ``primary`` | ``danger``
+        | ``ghost``; ``size``: ``sm`` | ``md`` | ``lg``).
     selected_ids:
         Controlled selection from the host. When this list identity/content
         changes, React adopts it; otherwise local toggles stay snappy.
@@ -542,7 +569,7 @@ def st_image_board(
         Show toolbar All / Select all / Deselect all when multi-select is on.
     buttons:
         Toolbar action buttons. Each dict: ``id``, ``label``, optional
-        ``variant`` (``default`` | ``primary`` | ``danger``), ``disabled``.
+        ``variant``, ``size``, ``style``, ``disabled``.
     card_buttons:
         Default per-card buttons applied to every item (merged before
         item-specific ``buttons``).
@@ -558,8 +585,10 @@ def st_image_board(
         (overflow goes to the next page instead of scrolling).
     page_size:
         Items per page. ``0`` / ``None`` disables paging (scroll mode).
-        When set, the board shows Prev/Next; selection (``selected_ids``,
-        select-all, size counter) covers **all** pages.
+        When set, the board shows First/Prev/Next/Last; selection
+        (``selected_ids``, select-all, size counter) covers **all** pages.
+    pager_position:
+        Where to place the pager: ``"top"`` (default) or ``"bottom"``.
     thumbnail_fit:
         CSS ``object-fit`` for thumbnails: ``cover`` (default) or ``contain``.
     empty_message:
@@ -604,6 +633,7 @@ def st_image_board(
     show_selection_stats = bool(pick("show_selection_stats", True, show_selection_stats))
     selection_color = str(pick("selection_color", "#0f766e", selection_color))
     card_style = pick("card_style", None, card_style)
+    button_style = pick("button_style", None, button_style)
     selected_ids = pick("selected_ids", None, selected_ids)
     multi_select = bool(pick("multi_select", True, multi_select))
     show_select_all = bool(pick("show_select_all", True, show_select_all))
@@ -618,6 +648,8 @@ def st_image_board(
     except (TypeError, ValueError):
         page_size_n = 0
     page_size_n = max(0, min(page_size_n, 200))
+    pager_pos_raw = str(pick("pager_position", "top", pager_position) or "top").lower()
+    pager_position_s = "bottom" if pager_pos_raw == "bottom" else "top"
     thumbnail_fit = str(pick("thumbnail_fit", "cover", thumbnail_fit))
     empty_message = str(pick("empty_message", "No images", empty_message))
 
@@ -649,12 +681,14 @@ def st_image_board(
         "show_selection_stats": bool(show_selection_stats),
         "selection_color": str(selection_color or "#0f766e"),
         "card_style": _sanitize_style(card_style),
+        "button_style": _sanitize_style(button_style),
         "selected_ids": initial_selected,
         "multi_select": bool(multi_select),
         "show_select_all": bool(show_select_all and multi_select and selectable),
         "buttons": _normalize_buttons(buttons),
         "max_height": int(max_height if height is None else height),
         "page_size": page_size_n,
+        "pager_position": pager_position_s,
         "thumbnail_fit": "contain" if thumbnail_fit == "contain" else "cover",
         "empty_message": str(empty_message),
     }

@@ -139,24 +139,38 @@
 
 .sig-btn {
   appearance: none;
-  border: 1px solid var(--sig-border);
-  background: #fff;
-  color: var(--sig-text);
-  border-radius: 8px;
-  padding: 6px 10px;
+  border: var(--sig-btn-border-width, 1px) var(--sig-btn-border-style, solid)
+    var(--sig-btn-border, var(--sig-border));
+  background: var(--sig-btn-bg, #fff);
+  color: var(--sig-btn-fg, var(--sig-text));
+  border-radius: var(--sig-btn-radius, 8px);
+  padding: var(--sig-btn-padding, 6px 10px);
   font: inherit;
-  font-weight: 600;
+  font-family: var(--sig-btn-font-family, inherit);
+  font-size: var(--sig-btn-font-size, inherit);
+  font-weight: var(--sig-btn-font-weight, 600);
   cursor: pointer;
   transition:
     background 120ms ease,
     border-color 120ms ease,
     transform 80ms ease,
     box-shadow 120ms ease;
-  box-shadow: var(--sig-shadow);
+  box-shadow: var(--sig-btn-shadow, var(--sig-shadow));
+}
+
+.sig-btn-sm {
+  padding: 3px 8px;
+  font-size: 12px;
+  border-radius: calc(var(--sig-btn-radius, 8px) * 0.75);
+}
+
+.sig-btn-lg {
+  padding: 9px 16px;
+  font-size: 15px;
 }
 
 .sig-btn:hover:not(:disabled) {
-  background: var(--sig-surface-hover);
+  filter: brightness(0.97);
 }
 
 .sig-btn:active:not(:disabled) {
@@ -169,28 +183,29 @@
 }
 
 .sig-btn-primary {
-  background: var(--sig-accent);
+  background: var(--sig-btn-primary-bg, var(--sig-accent));
   border-color: transparent;
-  color: #fff;
+  color: var(--sig-btn-primary-fg, #fff);
 }
 
 .sig-btn-primary:hover:not(:disabled) {
-  background: #0d9488;
+  filter: brightness(1.05);
 }
 
 .sig-btn-danger {
-  background: var(--sig-danger-soft);
+  background: var(--sig-btn-danger-bg, var(--sig-danger-soft));
   border-color: transparent;
-  color: var(--sig-danger);
+  color: var(--sig-btn-danger-fg, var(--sig-danger));
 }
 
 .sig-btn-danger:hover:not(:disabled) {
-  background: rgba(185, 28, 28, 0.2);
+  filter: brightness(0.96);
 }
 
 .sig-btn-ghost {
   background: transparent;
   box-shadow: none;
+  border-color: transparent;
 }
 
 .sig-scroll {

@@ -38,7 +38,42 @@ const ALLOWED = new Set([
   "width",
   "display",
   "alignSelf",
+  // Button theme extras (mapped to CSS variables in the gallery)
+  "primaryBackground",
+  "primaryColor",
+  "dangerBackground",
+  "dangerColor",
 ]);
+
+/** Map sanitized button_style keys → CSS custom properties for `.sig-btn`. */
+const BUTTON_THEME_VARS: Record<string, string> = {
+  background: "--sig-btn-bg",
+  backgroundColor: "--sig-btn-bg",
+  color: "--sig-btn-fg",
+  borderRadius: "--sig-btn-radius",
+  borderColor: "--sig-btn-border",
+  borderWidth: "--sig-btn-border-width",
+  borderStyle: "--sig-btn-border-style",
+  fontSize: "--sig-btn-font-size",
+  fontWeight: "--sig-btn-font-weight",
+  fontFamily: "--sig-btn-font-family",
+  padding: "--sig-btn-padding",
+  boxShadow: "--sig-btn-shadow",
+  primaryBackground: "--sig-btn-primary-bg",
+  primaryColor: "--sig-btn-primary-fg",
+  dangerBackground: "--sig-btn-danger-bg",
+  dangerColor: "--sig-btn-danger-fg",
+};
+
+export function buttonStyleToCssVars(style: CSSProperties): CSSProperties {
+  const vars: Record<string, string> = {};
+  for (const [key, value] of Object.entries(style as Record<string, unknown>)) {
+    const cssVar = BUTTON_THEME_VARS[key];
+    if (!cssVar || value == null) continue;
+    vars[cssVar] = String(value);
+  }
+  return vars as CSSProperties;
+}
 
 function toCamel(prop: string): string {
   return prop.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());

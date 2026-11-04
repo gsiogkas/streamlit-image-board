@@ -23,6 +23,7 @@ rerun for every toggle.
 - Toolbar **selection counter**: file count + total size
 - Optional **paging** (`page_size`) — overflow goes to the next page; checklist spans all pages
 - **Image-only cards** via `show_card_info=False` (hide labels / captions / chips / card buttons)
+- Configurable **button aesthetics** (`button_style`, per-button `variant` / `size` / `style`)
 - Shared checklist contract for **AgGrid** (classic + v2)
 - Returns `selected_ids: list[str]`, `selected_csv`, and size stats
 
@@ -102,6 +103,44 @@ n = result.selected_count   # 2
 size = result.selected_size # e.g. "240.0 KB" when sizes are known
 ```
 
+### Button aesthetics
+
+Board-wide theme (toolbar, pager, card buttons):
+
+```python
+result = st_image_board(
+    items,
+    button_style={
+        "background": "#ffffff",
+        "color": "#0f172a",
+        "borderRadius": "999px",
+        "padding": "6px 14px",
+        "fontSize": "13px",
+        "primaryBackground": "#0f766e",
+        "primaryColor": "#ffffff",
+        "dangerBackground": "#fee2e2",
+        "dangerColor": "#b91c1c",
+    },
+    buttons=[
+        {"id": "ok", "label": "Approve", "variant": "primary", "size": "lg"},
+        {"id": "no", "label": "Skip", "variant": "ghost", "size": "sm"},
+        {
+            "id": "del",
+            "label": "Delete",
+            "variant": "danger",
+            "style": {"fontWeight": "700"},
+        },
+    ],
+)
+```
+
+| Knob | Values |
+| --- | --- |
+| `variant` | `default` · `primary` · `danger` · `ghost` |
+| `size` | `sm` · `md` (default) · `lg` |
+| `style` | per-button sanitized CSS override |
+| `button_style` | board theme → CSS variables for all `.sig-btn` |
+
 ### Image-only cards
 
 Hide everything under the thumbnail (label, caption, chips, per-card buttons):
@@ -118,8 +157,14 @@ Set `page_size` to a positive integer to paginate instead of scrolling.
 Selection, select-all, and the size counter stay **global** across pages.
 
 ```python
-result = st_image_board(items, columns=4, page_size=8)
+result = st_image_board(
+    items,
+    columns=4,
+    page_size=8,
+    pager_position="top",  # or "bottom"
+)
 # page_size=0 (default) → classic scroll via max_height
+# Pager controls: First / Prev / Next / Last
 ```
 
 ### Selection size counter

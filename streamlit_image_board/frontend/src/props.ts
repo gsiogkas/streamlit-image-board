@@ -17,11 +17,16 @@ function asButton(raw: unknown): GalleryButton | null {
   const b = raw as Record<string, unknown>;
   if (typeof b.id !== "string" || !b.id) return null;
   const variant =
-    b.variant === "primary" || b.variant === "danger" ? b.variant : "default";
+    b.variant === "primary" || b.variant === "danger" || b.variant === "ghost"
+      ? b.variant
+      : "default";
+  const size = b.size === "sm" || b.size === "lg" ? b.size : "md";
   return {
     id: b.id,
     label: typeof b.label === "string" ? b.label : b.id,
     variant,
+    size,
+    style: sanitizeStyle(b.style),
     disabled: Boolean(b.disabled),
   };
 }
@@ -161,6 +166,7 @@ export function normalizeGalleryProps(
     show_selection_stats: p.show_selection_stats !== false,
     selection_color: selectionColor,
     card_style: sanitizeStyle(p.card_style),
+    button_style: sanitizeStyle(p.button_style),
     selected_ids,
     multi_select: p.multi_select !== false,
     show_select_all: Boolean(p.show_select_all),
@@ -171,6 +177,7 @@ export function normalizeGalleryProps(
       if (!Number.isFinite(raw) || raw <= 0) return 0;
       return Math.max(1, Math.min(Math.floor(raw), 200));
     })(),
+    pager_position: p.pager_position === "bottom" ? "bottom" : "top",
     thumbnail_fit: p.thumbnail_fit === "contain" ? "contain" : "cover",
     empty_message:
       typeof p.empty_message === "string" ? p.empty_message : "No images",

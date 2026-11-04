@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 
-export type ButtonVariant = "default" | "primary" | "danger";
+export type ButtonVariant = "default" | "primary" | "danger" | "ghost";
+export type ButtonSize = "sm" | "md" | "lg";
 
 /** What happens when the user clicks the thumbnail (not the checkbox). */
 export type ImageClickMode = "select" | "open" | "none";
@@ -9,6 +10,9 @@ export type GalleryButton = {
   id: string;
   label: string;
   variant: ButtonVariant;
+  size: ButtonSize;
+  /** Optional per-button inline styles (sanitized). */
+  style: CSSProperties;
   disabled: boolean;
 };
 
@@ -70,6 +74,11 @@ export type GalleryDataShape = {
   selection_color: string;
   /** Default card chrome applied under each item's card_style. */
   card_style: CSSProperties;
+  /**
+   * Board-wide button theme (radius, colors, padding, primary/danger accents).
+   * Applied as CSS variables; per-button ``style`` still overrides.
+   */
+  button_style: CSSProperties;
   selected_ids: string[];
   multi_select: boolean;
   show_select_all: boolean;
@@ -80,6 +89,8 @@ export type GalleryDataShape = {
    * Selection checklist spans all pages.
    */
   page_size: number;
+  /** Where to render First/Prev/Next/Last when paging. */
+  pager_position: "top" | "bottom";
   thumbnail_fit: "cover" | "contain";
   empty_message: string;
 };
