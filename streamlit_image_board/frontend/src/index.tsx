@@ -41,6 +41,8 @@ const GalleryRoot: FrontendRenderer<GalleryStateShape, GalleryDataShape> = (
       holder.setStateValue("clicked_button", payload.clicked_button);
       holder.setStateValue("clicked_item", payload.clicked_item);
       holder.setStateValue("action_nonce", payload.action_nonce);
+      holder.setStateValue("layout_columns", payload.layout_columns);
+      holder.setStateValue("layout_rows", payload.layout_rows);
     });
     bridges.set(parentElement, holder);
     bridge = holder;

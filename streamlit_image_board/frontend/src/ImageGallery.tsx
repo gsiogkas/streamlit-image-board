@@ -25,9 +25,52 @@ export type GallerySetStateValue = (
     | "selected_csv"
     | "clicked_button"
     | "clicked_item"
-    | "action_nonce",
+    | "action_nonce"
+    | "layout_columns"
+    | "layout_rows",
   value: string[] | string | number | null,
 ) => void;
+
+function LayoutStepper({
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (next: number) => void;
+}) {
+  return (
+    <div className="sig-layout-stepper" role="group" aria-label={label}>
+      <span className="sig-layout-label">{label}</span>
+      <button
+        type="button"
+        className="sig-btn sig-btn-sm"
+        disabled={value <= min}
+        aria-label={`Decrease ${label}`}
+        onClick={() => onChange(Math.max(min, value - 1))}
+      >
+        −
+      </button>
+      <span className="sig-layout-value" aria-live="polite">
+        {value}
+      </span>
+      <button
+        type="button"
+        className="sig-btn sig-btn-sm"
+        disabled={value >= max}
+        aria-label={`Increase ${label}`}
+        onClick={() => onChange(Math.min(max, value + 1))}
+      >
+        +
+      </button>
+    </div>
+  );
+}
 
 type Props = GalleryDataShape & {
   setStateValue: GallerySetStateValue;
@@ -343,7 +386,39 @@ export default function ImageGallery({
   const itemIds = useMemo(() => data.items.map((i) => i.id), [data.items]);
   const itemIdsKey = useMemo(() => itemIds.join("\0"), [itemIds]);
 
-  const pageSize = data.page_size > 0 ? data.page_size : 0;
+  const [columns, setColumns] = useState(() => data.columns);
+  const [rows, setRows] = useState(() =>
+    data.rows > 0 ? data.rows : data.show_layout_controls ? 2 : 0,
+  );
+
+  useEffect(() => {
+    setColumns(data.columns);
+  }, [data.columns]);
+
+  useEffect(() => {
+    if (data.rows > 0) setRows(data.rows);
+    else if (!data.show_layout_controls) setRows(0);
+  }, [data.rows, data.show_layout_controls]);
+
+  const pushLayout = useCallback(
+    (nextCols: number, nextRows: number) => {
+      setStateValue("layout_columns", nextCols);
+      setStateValue("layout_rows", nextRows > 0 ? nextRows : null);
+    },
+    [setStateValue],
+  );
+
+  useEffect(() => {
+    pushLayout(columns, rows);
+  }, [columns, rows, pushLayout]);
+
+  const effectiveColumns = columns;
+  const pageSize = useMemo(() => {
+    if (rows > 0) return Math.max(1, effectiveColumns * rows);
+    if (data.page_size > 0) return data.page_size;
+    return 0;
+  }, [data.page_size, effectiveColumns, rows]);
+
   const pageCount = pageSize
     ? Math.max(1, Math.ceil(data.items.length / pageSize))
     : 1;
@@ -358,6 +433,24 @@ export default function ImageGallery({
     const start = page * pageSize;
     return data.items.slice(start, start + pageSize);
   }, [data.items, page, pageSize]);
+
+  const onColumnsChange = useCallback(
+    (next: number) => {
+      setColumns(next);
+      pushLayout(next, rows);
+      setPage(0);
+    },
+    [pushLayout, rows],
+  );
+
+  const onRowsChange = useCallback(
+    (next: number) => {
+      setRows(next);
+      pushLayout(columns, next);
+      setPage(0);
+    },
+    [columns, pushLayout],
+  );
 
   useEffect(() => {
     if (hostSelectedKey === lastPushedSelection.current) {
@@ -479,7 +572,7 @@ export default function ImageGallery({
 
   const gridStyle: CSSProperties = {
     display: "grid",
-    gridTemplateColumns: `repeat(${data.columns}, minmax(0, 1fr))`,
+    gridTemplateColumns: `repeat(${effectiveColumns}, minmax(0, 1fr))`,
     gap: data.gap,
     width: "100%",
   };
@@ -545,9 +638,15 @@ export default function ImageGallery({
     </div>
   ) : null;
 
+  const showToolbar =
+    data.show_select_all ||
+    data.buttons.length > 0 ||
+    data.selectable ||
+    data.show_layout_controls;
+
   return (
     <div className="sig-root" style={rootStyle}>
-      {(data.show_select_all || data.buttons.length > 0 || data.selectable) && (
+      {showToolbar ? (
         <div className="sig-toolbar">
           {data.selectable ? (
             <span
@@ -624,8 +723,30 @@ export default function ImageGallery({
           {data.buttons.map((b) => (
             <ActionButton key={b.id} button={b} onClick={onToolbarButton} />
           ))}
+
+          {data.show_layout_controls ? (
+            <div className="sig-layout-controls">
+              <LayoutStepper
+                label="Columns"
+                value={effectiveColumns}
+                min={1}
+                max={8}
+                onChange={onColumnsChange}
+              />
+              <LayoutStepper
+                label="Rows"
+                value={rows > 0 ? rows : 2}
+                min={1}
+                max={8}
+                onChange={(next) => {
+                  if (rows <= 0) setRows(next);
+                  onRowsChange(next);
+                }}
+              />
+            </div>
+          ) : null}
         </div>
-      )}
+      ) : null}
 
       {pagerOnTop ? pager : null}
 

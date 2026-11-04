@@ -27,6 +27,8 @@ BOARD_OPTION_KEYS = frozenset(
         "height",
         "max_height",
         "page_size",
+        "rows",
+        "show_layout_controls",
         "pager_position",
         "thumbnail_fit",
         "empty_message",

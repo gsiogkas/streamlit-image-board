@@ -222,6 +222,39 @@
   min-height: 0;
 }
 
+.sig-layout-controls {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.sig-layout-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  border: 1px solid var(--sig-border);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: var(--sig-shadow);
+}
+
+.sig-layout-label {
+  color: var(--sig-muted);
+  font-weight: 650;
+  font-size: 12px;
+  padding: 0 4px 0 6px;
+}
+
+.sig-layout-value {
+  min-width: 1.5ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
 .sig-pager {
   display: flex;
   flex-wrap: wrap;

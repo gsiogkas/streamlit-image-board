@@ -10,9 +10,12 @@ Named **image-board** (not gallery) to avoid clashing with existing
 cards, and toolbar actions update **inside the widget** — no full Streamlit
 rerun for every toggle.
 
+**Version:** 0.2.0
+
 ## Features
 
 - CSS grid of image cards (configurable columns / gap)
+- Optional **Columns / Rows steppers** (`show_layout_controls`)
 - Configurable **image click**: `select` | `open` | `none` (per item or board-wide)
 - Optional **checkboxes** kept in sync with the same selection
 - **Select all / Deselect all** + master **All** control
@@ -21,11 +24,11 @@ rerun for every toggle.
 - Per-card (and board-default) **background, text color, font**
 - **JSON** items / full board config (file path, string, or dict)
 - Toolbar **selection counter**: file count + total size
-- Optional **paging** (`page_size`) — overflow goes to the next page; checklist spans all pages
-- **Image-only cards** via `show_card_info=False` (hide labels / captions / chips / card buttons)
-- Configurable **button aesthetics** (`button_style`, per-button `variant` / `size` / `style`)
+- Optional **paging** (`page_size` or `rows`) — overflow to next page; checklist spans all pages
+- **Image-only cards** via `show_card_info=False`
+- Configurable **button aesthetics** (`button_style`, `variant` / `size` / `style`)
 - Shared checklist contract for **AgGrid** (classic + v2)
-- Returns `selected_ids: list[str]`, `selected_csv`, and size stats
+- Returns `selected_ids`, size stats, and live `layout_columns` / `layout_rows`
 
 ## Install
 
@@ -49,8 +52,9 @@ Demo:
 streamlit run app.py
 ```
 
-Bundled demo photos live in [`examples/images/`](examples/images/) (public domain;
-see [`ATTRIBUTION.md`](examples/images/ATTRIBUTION.md)). Refresh with
+More recipes: [`examples/USAGE.md`](examples/USAGE.md).  
+Bundled demo photos: [`examples/images/`](examples/images/)
+([`ATTRIBUTION.md`](examples/images/ATTRIBUTION.md)). Refresh with
 `uv run python scripts/fetch_demo_images.py`.
 
 ## Quick start
@@ -151,21 +155,23 @@ result = st_image_board(items, show_card_info=False)
 
 Checkboxes, hover overlay, selection frame, and toolbar actions still work.
 
-### Paging
-
-Set `page_size` to a positive integer to paginate instead of scrolling.
-Selection, select-all, and the size counter stay **global** across pages.
+### Paging + columns / rows controls
 
 ```python
 result = st_image_board(
     items,
     columns=4,
-    page_size=8,
-    pager_position="top",  # or "bottom"
+    rows=2,                       # page size = 8
+    show_layout_controls=True,    # toolbar: Columns −/+  Rows −/+
+    pager_position="top",         # or "bottom"
 )
-# page_size=0 (default) → classic scroll via max_height
-# Pager controls: First / Prev / Next / Last
+# Or set page_size=8 directly (ignored when rows > 0)
+# page_size=0 and rows=0 → classic scroll via max_height
+# Pager: First / Prev / Next / Last
+st.write(result.layout_columns, result.layout_rows)
 ```
+
+Hide steppers with `show_layout_controls=False`. Selection stays **global** across pages.
 
 ### Selection size counter
 
@@ -269,6 +275,8 @@ Allowed style keys are sanitized (color, background, fontFamily, padding, …).
 | `selected_count` | Number of selected files |
 | `selected_bytes` | Sum of known `size_bytes` |
 | `selected_size` | Human-readable total (or `""`) |
+| `layout_columns` | Live column count (layout steppers / host) |
+| `layout_rows` | Live rows per page (`None` if unused) |
 | `clicked_button` | Last toolbar/card button id |
 | `clicked_item` | Item id for card button / activation |
 | `action_nonce` | Increments on each action so repeats are detectable |

@@ -4,7 +4,7 @@ Do these in order for a **first** release: **GitHub → PyPI → Streamlit `.app
 
 For later releases, see [Updating an existing release](#updating-an-existing-release).
 
-Current package version: **0.1.0**
+Current package version: **0.2.0**
 
 ---
 
@@ -39,17 +39,20 @@ Confirm these are present and not ignored:
 - `LICENSE`, `README.md`, `PUBLISHING.md`, `requirements.txt`
 - `examples/board_config.json`, `examples/items.json`
 
-### 1b. First commit
+### 1b. Commit (including version bumps)
 
 ```bash
 # if git is not initialized yet
 git init
 git branch -M main
 
+# refresh GIF after UI changes
+uv run python scripts/make_usage_gif.py
+
 git add .
 git status   # no .venv, node_modules, __pycache__, .ruff_cache
 git commit -m "$(cat <<'EOF'
-Initial release 0.1.0: selectable image board with open/JSON/AgGrid.
+Release 0.2.0: layout steppers, paging, button theme, PD demos.
 
 EOF
 )"

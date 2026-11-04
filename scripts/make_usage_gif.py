@@ -107,7 +107,7 @@ def _draw_frame(selected: set[int], hover: int | None, caption: str) -> Image.Im
         fill="#64748b",
         font=small,
     )
-    bx = PAD + 220
+    bx = PAD + 200
     toolbar_btns = (
         ("All", len(selected) == 7),
         ("Select all", False),
@@ -125,6 +125,17 @@ def _draw_frame(selected: set[int], hover: int | None, caption: str) -> Image.Im
         )
         draw.text((bx + 12, toolbar_y + 13), label, fill=fg, font=tiny)
         bx += tw + 8
+
+    # Columns / Rows steppers (layout controls)
+    for label, value in (("Columns", str(COLS)), ("Rows", str(ROWS))):
+        draw.rounded_rectangle(
+            (bx, toolbar_y + 8, bx + 108, toolbar_y + 36),
+            radius=8,
+            fill="#ffffff",
+            outline="#cbd5e1",
+        )
+        draw.text((bx + 8, toolbar_y + 13), f"{label} − {value} +", fill="#0f172a", font=tiny)
+        bx += 116
 
     for i, (swatch, bg, fg, name) in enumerate(SWATCHES):
         x0, y0, x1, y1 = _card_box(i)
@@ -177,12 +188,12 @@ def main() -> None:
     OUT.parent.mkdir(parents=True, exist_ok=True)
     frames: list[Image.Image] = []
     sequence: list[tuple[set[int], int | None, str, int]] = [
-        (set(), None, "0.1 · selectable board · styled cards", 12),
+        (set(), None, "0.2 · columns/rows steppers · paging", 12),
         (set(), 0, "Hover shows overlay text", 10),
         ({0}, 0, "Click image → selection frame", 10),
         ({0, 2, 3}, None, "Multi-select via image or checkbox", 12),
-        ({0, 1, 2, 3, 4, 5, 7}, None, "Select all (enabled cards)", 12),
-        (set(), None, "Deselect all", 10),
+        ({0, 1, 2, 3, 4, 5, 7}, None, "Select all across pages", 12),
+        (set(), None, "Deselect all · First/Prev/Next/Last", 10),
         ({2, 7}, None, "Checklist syncs as list[str] ids", 14),
     ]
     for selected, hover, caption, hold in sequence:

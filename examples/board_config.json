@@ -11,7 +11,9 @@
   "selection_color": "#0f766e",
   "thumbnail_fit": "cover",
   "max_height": 480,
-  "page_size": 2,
+  "page_size": 0,
+  "rows": 1,
+  "show_layout_controls": true,
   "pager_position": "top",
   "empty_message": "No images",
   "card_style": {

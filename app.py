@@ -137,13 +137,26 @@ show_card_info = st.sidebar.checkbox(
 )
 show_select_all = st.sidebar.checkbox("Select / deselect all", True)
 multi = st.sidebar.checkbox("Multi-select", True)
+show_layout = st.sidebar.checkbox(
+    "Columns / rows controls",
+    True,
+    help="Toolbar steppers to change grid columns and rows per page.",
+)
+rows = st.sidebar.number_input(
+    "Rows per page",
+    min_value=0,
+    max_value=8,
+    value=2,
+    step=1,
+    help="0 = unused (use page size). >0 → page size = columns × rows.",
+)
 page_size = st.sidebar.number_input(
     "Page size",
     min_value=0,
     max_value=48,
-    value=4,
+    value=0,
     step=1,
-    help="0 = scroll all images. >0 = paginate; selection spans all pages.",
+    help="0 = scroll (or use rows). Ignored when rows > 0.",
 )
 pager_position = st.sidebar.selectbox(
     "Pager position",
@@ -237,6 +250,8 @@ result = st_image_board(
     selected_ids=st.session_state.shared_selection,
     multi_select=multi,
     page_size=int(page_size),
+    rows=int(rows),
+    show_layout_controls=show_layout,
     pager_position=pager_position,
     thumbnail_fit=fit,
     max_height=520,

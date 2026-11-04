@@ -89,6 +89,13 @@ export type GalleryDataShape = {
    * Selection checklist spans all pages.
    */
   page_size: number;
+  /**
+   * Rows per page. When > 0, paging uses ``columns * rows`` unless
+   * ``page_size`` is already > 0 (page_size wins).
+   */
+  rows: number;
+  /** Show Columns / Rows steppers in the toolbar. */
+  show_layout_controls: boolean;
   /** Where to render First/Prev/Next/Last when paging. */
   pager_position: "top" | "bottom";
   thumbnail_fit: "cover" | "contain";
@@ -102,4 +109,8 @@ export type GalleryStateShape = {
   clicked_button: string | null;
   clicked_item: string | null;
   action_nonce: number | null;
+  /** Live columns from layout controls (or host). */
+  layout_columns: number | null;
+  /** Live rows from layout controls (or host). */
+  layout_rows: number | null;
 };

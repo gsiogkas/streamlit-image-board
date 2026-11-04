@@ -177,6 +177,12 @@ export function normalizeGalleryProps(
       if (!Number.isFinite(raw) || raw <= 0) return 0;
       return Math.max(1, Math.min(Math.floor(raw), 200));
     })(),
+    rows: (() => {
+      const raw = Number(p.rows);
+      if (!Number.isFinite(raw) || raw <= 0) return 0;
+      return Math.max(1, Math.min(Math.floor(raw), 12));
+    })(),
+    show_layout_controls: Boolean(p.show_layout_controls),
     pager_position: p.pager_position === "bottom" ? "bottom" : "top",
     thumbnail_fit: p.thumbnail_fit === "contain" ? "contain" : "cover",
     empty_message:

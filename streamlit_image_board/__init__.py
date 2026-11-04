@@ -67,6 +67,10 @@ class BoardResult:
         Sum of ``size_bytes`` for selected items that declare a size.
     selected_size:
         Human-readable ``selected_bytes`` (empty when no sizes known).
+    layout_columns:
+        Live column count from layout controls (falls back to host ``columns``).
+    layout_rows:
+        Live rows-per-page from layout controls (``None`` when unused).
     clicked_button:
         Id of the last toolbar / per-item button pressed, or None.
     clicked_item:
@@ -80,6 +84,8 @@ class BoardResult:
     selected_count: int = 0
     selected_bytes: int = 0
     selected_size: str = ""
+    layout_columns: int | None = None
+    layout_rows: int | None = None
     clicked_button: str | None = None
     clicked_item: str | None = None
     action_nonce: int = 0
@@ -498,6 +504,8 @@ def st_image_board(
     height: Any = _UNSET,
     max_height: Any = _UNSET,
     page_size: Any = _UNSET,
+    rows: Any = _UNSET,
+    show_layout_controls: Any = _UNSET,
     pager_position: Any = _UNSET,
     thumbnail_fit: Any = _UNSET,
     empty_message: Any = _UNSET,
@@ -587,6 +595,14 @@ def st_image_board(
         Items per page. ``0`` / ``None`` disables paging (scroll mode).
         When set, the board shows First/Prev/Next/Last; selection
         (``selected_ids``, select-all, size counter) covers **all** pages.
+        Ignored when ``rows`` > 0 (page size becomes ``columns * rows``).
+    rows:
+        Rows per page. When ``> 0``, enables paging with
+        ``page_size = columns * rows``. Useful with ``show_layout_controls``.
+    show_layout_controls:
+        Show Columns / Rows steppers in the toolbar so users can change the
+        grid without a Streamlit rerun. Live values are returned as
+        ``layout_columns`` / ``layout_rows`` on :class:`BoardResult`.
     pager_position:
         Where to place the pager: ``"top"`` (default) or ``"bottom"``.
     thumbnail_fit:
@@ -648,6 +664,12 @@ def st_image_board(
     except (TypeError, ValueError):
         page_size_n = 0
     page_size_n = max(0, min(page_size_n, 200))
+    try:
+        rows_n = int(pick("rows", 0, rows) or 0)
+    except (TypeError, ValueError):
+        rows_n = 0
+    rows_n = max(0, min(rows_n, 12))
+    show_layout_controls = bool(pick("show_layout_controls", False, show_layout_controls))
     pager_pos_raw = str(pick("pager_position", "top", pager_position) or "top").lower()
     pager_position_s = "bottom" if pager_pos_raw == "bottom" else "top"
     thumbnail_fit = str(pick("thumbnail_fit", "cover", thumbnail_fit))
@@ -665,6 +687,12 @@ def st_image_board(
                 item["texts"] = list(shared_card_texts) + list(item.get("texts") or [])
 
     cols = max(1, min(int(columns), 8))
+    if rows_n > 0:
+        page_size_n = cols * rows_n
+    elif show_layout_controls and page_size_n <= 0:
+        # Layout steppers default to 2 rows → enable paging immediately.
+        rows_n = 2
+        page_size_n = cols * rows_n
     component_height = int(height) if height is not None else int(max_height)
     initial_selected = [str(x) for x in (selected_ids or [])]
 
@@ -688,6 +716,8 @@ def st_image_board(
         "buttons": _normalize_buttons(buttons),
         "max_height": int(max_height if height is None else height),
         "page_size": page_size_n,
+        "rows": rows_n,
+        "show_layout_controls": bool(show_layout_controls),
         "pager_position": pager_position_s,
         "thumbnail_fit": "contain" if thumbnail_fit == "contain" else "cover",
         "empty_message": str(empty_message),
@@ -702,12 +732,16 @@ def st_image_board(
             "clicked_button": None,
             "clicked_item": None,
             "action_nonce": 0,
+            "layout_columns": cols,
+            "layout_rows": rows_n or None,
         },
         on_selected_ids_change=_noop,
         on_selected_csv_change=_noop,
         on_clicked_button_change=_noop,
         on_clicked_item_change=_noop,
         on_action_nonce_change=_noop,
+        on_layout_columns_change=_noop,
+        on_layout_rows_change=_noop,
         height=component_height,
     )
 
@@ -718,12 +752,25 @@ def st_image_board(
     )
     count, total_bytes, sized = selected_size_bytes(normalized, ids)
 
+    layout_cols = getattr(raw, "layout_columns", None)
+    layout_rows = getattr(raw, "layout_rows", None)
+    try:
+        layout_cols_i = int(layout_cols) if layout_cols is not None else cols
+    except (TypeError, ValueError):
+        layout_cols_i = cols
+    try:
+        layout_rows_i = int(layout_rows) if layout_rows is not None else (rows_n or None)
+    except (TypeError, ValueError):
+        layout_rows_i = rows_n or None
+
     return BoardResult(
         selected_ids=ids,
         selected_csv=csv,
         selected_count=count,
         selected_bytes=total_bytes,
         selected_size=format_bytes(total_bytes) if sized else "",
+        layout_columns=layout_cols_i,
+        layout_rows=layout_rows_i,
         clicked_button=getattr(raw, "clicked_button", None),
         clicked_item=getattr(raw, "clicked_item", None),
         action_nonce=int(getattr(raw, "action_nonce", 0) or 0),
